@@ -1,5 +1,9 @@
 # 韭菜盒子 LeekBox 🥬
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+[English](README.en.md) | 简体中文
+
 A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 
 在 DSH Web 界面的左侧边栏出现 🥬 入口，点击打开行情面板：
