@@ -1,0 +1,6 @@
+# bundle patch for the leekbox plugin: inserts its plugin row into the web
+# profile roster. Applied as a profile bundle layer (the `dsh.bundle.patch`
+# manifest field).
+- insert:
+    - id: leekbox
+      name: '@leekbox/dsh-leekbox'
