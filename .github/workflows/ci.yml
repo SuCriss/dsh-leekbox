@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax-check all lib modules
+        run: |
+          node --check lib/index.js
+          node --check lib/client.js
+          node --check lib/fetch-utils.js
+          node --check lib/screener.js
+      - name: Validate package.json manifest
+        run: |
+          node -e "const p=require('./package.json'); if(!p.dsh||!p.dsh.bundle||!p.dsh.bundle.patch) { console.error('missing dsh.bundle.patch manifest'); process.exit(1); } if(!p.files||!p.files.includes('cordis.patch.yml')) { console.error('cordis.patch.yml must ship in files'); process.exit(1); }"
