@@ -21,7 +21,7 @@ A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 ## 数据源
 
 - 实时行情 / 指数 / 分时 / K线：腾讯财经（qt.gtimg.cn / web.ifzq.gtimg.cn / ifzq.gtimg.cn）
-- 榜单 / 选股：新浪财经（vip.stock.finance.sina.com.cn）
+- 榜单 / 选股：东方财富（push2.eastmoney.com，多镜像自动回退）
 - 搜索：东方财富（searchadapter.eastmoney.com）
 - 7×24 快讯：新浪财经直播流（zhibo.sina.com.cn）+ 东方财富快讯（np-listapi.eastmoney.com）+ 金十数据（jin10.com）；重要资讯 = 各源官方标记（金十星标 / 新浪焦点）+ 关键词兜底（突发/重磅/重大/紧急/超预期）
 
