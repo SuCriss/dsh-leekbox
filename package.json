@@ -1,6 +1,6 @@
 {
   "name": "@leekbox/dsh-leekbox",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "韭菜盒子 LeekBox — A股看盘助手：实时行情、大盘指数、个股详情弹窗（同花顺式K线·前复权）、自选股、条件选股、三源聚合7x24快讯。Runs as a DSH web client plugin.",
   "keywords": [
     "dsh",
