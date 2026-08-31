@@ -3,6 +3,50 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] - 2026-08-31
+
+### Added
+
+- Market sentiment thermometer (市场情绪温度计): the market tab now shows
+  up/down/limit-up/limit-down/broken-board counts, a consecutive-board ladder
+  (连板梯队, 2板/3板/… with counts), the highest board, and an expandable
+  limit-up pool list (name, board count, industry; click to open the detail
+  popup). New `/api/leekbox/sentiment` payload with `up/down/flat`, `broken`,
+  `ladder`, `maxBoard` and `ztList` from the Eastmoney topic pools plus
+  whole-market breadth.
+- ETF / 可转债 / LOF support:
+  - Rank pool selector in the market tab: 沪深A股 / ETF·场内基金 / 可转债 /
+    LOF (Eastmoney `b:MK0021` / `b:MK0354` / `m:1+t:5,m:0+t:10`), reusing the
+    existing rank route with a `node` parameter.
+  - `normalizeCode` now accepts 5-digit codes (ETF/LOF) and maps 11xxxx
+    (沪市可转债) to `sh`, so ETF/bond codes work in watchlist, quote, kline
+    and search.
+  - Search now returns A-share stocks, on-exchange funds (ETF/LOF, Classify
+    `Fund`) and convertible bonds (Classify `Bond`) instead of stocks only.
+
+## [0.4.0] - 2026-08-31
+
+### Added
+
+- Watchlist import/export: export the watchlist as a JSON backup (group-aware,
+  re-importable) or as UTF-8 CSV for Excel/WPS; import from JSON, CSV or plain
+  pasted text (one stock per line, `code[,name[,group]]`, quoted cells and a
+  `code`/`代码` header row tolerated). Two modes: merge (skip duplicates,
+  default) and replace (with a client-side confirmation). Imported codes are
+  normalized the same way as manual adds, invalid lines are reported back.
+- Toolbar row in the watchlist tab with 导入 / 覆盖导入 / 导出 JSON / 导出 CSV
+  buttons and a status line; the toolbar is also available when the watchlist
+  is empty.
+
+### Fixed
+
+- `normalizeCode` had its function body jammed onto the signature line.
+- `writeWatchlist` failure path contained dead code (a no-op `require` check)
+  that never cleaned up the leftover `.tmp` file; it now unlinks it.
+- Row-level open-detail clicks no longer fire when the click lands on an
+  interactive child: changing the group `<select>` in the watchlist (or any
+  future select/button inside a quote row) no longer pops the detail window.
+
 ## [0.2.0] - 2026-08-26
 
 ### Added

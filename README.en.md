@@ -8,10 +8,15 @@ Click the 🥬 entry in the DSH sidebar to open the dashboard.
 | Tab | What it does |
 | --- | --- |
 | 📊 大盘 | SSE / SZSE / ChiNext / STAR50 realtime indices, 30s auto-refresh |
-| 💹 行情 | Stock search (code / name / pinyin) + gainers, losers, turnover, volume boards |
-| ⭐ 自选 | Persistent watchlist with realtime quotes (`$DSH_HOME/.leekbox-watchlist.json`) |
+| 💹 行情 | Search stocks / ETFs / convertible bonds / LOFs (code, name, pinyin) + multi-pool boards (A-share / ETF / convertible bond / LOF, by gain, amount, turnover or main net inflow) + sector boards + dragon-tiger list |
+| ⭐ 自选 | Persistent watchlist with realtime quotes (`$DSH_HOME/.leekbox-watchlist.json`), grouped; one-click JSON backup / CSV export, import from JSON/CSV/text (merge or replace) |
 | 🔍 选股 | Multi-signal screener over the whole market: pool + basic filters + technical signals, weighted score ranking |
 | 📰 快讯 | 7x24 news aggregated from Sina, Eastmoney and Jin10, filterable by source; important items highlighted in red |
+
+The market tab opens with a sentiment thermometer: limit-up / limit-down /
+broken-board counts, whole-market up/down breadth, a consecutive-board ladder
+(2板/3板/… plus the highest board), and an expandable limit-up pool list
+(click a name to open its detail popup).
 
 Clicking any stock name (including in the watchlist) opens a dedicated detail
 popup window, Tonghuashun-style: large price header, 15 live indicators, and

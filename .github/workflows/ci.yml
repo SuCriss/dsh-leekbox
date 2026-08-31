@@ -18,6 +18,7 @@ jobs:
           node --check lib/index.js
           node --check lib/client.js
           node --check lib/fetch-utils.js
+          node --check lib/emrank.js
           node --check lib/screener.js
       - name: Validate package.json manifest
         run: |
