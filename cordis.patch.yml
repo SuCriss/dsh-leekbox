@@ -3,4 +3,4 @@
 # manifest field).
 - insert:
     - id: leekbox
-      name: '@leekbox/dsh-leekbox'
+      name: 'dsh-leekbox'

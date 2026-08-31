@@ -33,12 +33,12 @@ A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 
 ```bash
 # 1. 把包链接进 web profile 的 node_modules（或 pnpm add file:...）
-mklink /J "$DSH_HOME\profiles\web\node_modules\@leekbox\dsh-leekbox" "<本包路径>"
+mklink /J "$DSH_HOME\profiles\web\node_modules\dsh-leekbox" "<本包路径>"
 
 # 2. 在 $DSH_HOME/profiles/web/cordis.patch.yml 追加：
 # - insert:
 #     - id: leekbox
-#       name: '@leekbox/dsh-leekbox'
+#       name: 'dsh-leekbox'
 
 # 3. profile 配置文件 watcher 会在 ~1s 内热重组合，无需重启（服务端立即生效）；
 #    浏览器刷新页面后侧边栏出现 🥬 入口。

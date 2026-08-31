@@ -45,11 +45,11 @@ dsh plugin --profile web add <this repo>
 or manually:
 
 ```sh
-mklink /J "$DSH_HOME\profiles\web\node_modules\@leekbox\dsh-leekbox" "<repo path>"
+mklink /J "$DSH_HOME\profiles\web\node_modules\dsh-leekbox" "<repo path>"
 # then append to $DSH_HOME/profiles/web/cordis.patch.yml:
 # - insert:
 #     - id: leekbox
-#       name: '@leekbox/dsh-leekbox'
+#       name: 'dsh-leekbox'
 ```
 
 Refresh the page after install. Host-side changes need a DSH restart.

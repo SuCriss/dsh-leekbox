@@ -22,7 +22,7 @@ loader, and the host half is plain ESM on top of Node's built-in fetch.
    ```yaml
    - insert:
        - id: leekbox
-         name: '@leekbox/dsh-leekbox'
+         name: 'dsh-leekbox'
    ```
 
 4. Refresh the DSH web page — the 🥬 entry appears in the sidebar.
