@@ -1,7 +1,7 @@
 {
   "name": "dsh-leekbox",
-  "version": "0.5.0",
-  "description": "韭菜盒子 LeekBox — A股看盘助手：实时行情、大盘指数、个股详情弹窗（同花顺式K线·前复权）、自选股、条件选股、三源聚合7x24快讯、市场情绪温度计（连板梯队/炸板率/涨跌家数）、ETF/可转债/LOF。Runs as a DSH web client plugin.",
+  "version": "0.6.0",
+  "description": "韭菜盒子 LeekBox — A股看盘助手：实时行情、大盘指数、个股详情弹窗（同花顺式K线·前复权）、自选股、条件选股（评分选股+多策略交叉选股）、三源聚合7x24快讯、市场情绪温度计（连板梯队/炸板率/涨跌家数）、ETF/可转债/LOF。Runs as a DSH web client plugin.",
   "keywords": [
     "dsh",
     "dsh-plugin",

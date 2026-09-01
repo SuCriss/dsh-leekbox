@@ -3,6 +3,17 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.0] - 2026-09-02
+
+### Added
+
+- Multi-strategy intersection screener mode (多策略交叉选股): run 7 preset
+  strategies (MACD金叉 / 均线多头 / 放量突破 / 超卖反弹 / 趋势转强 / 创60日新高 /
+  强势连涨) simultaneously and show stocks that hit ≥ N strategies, sorted by
+  hit count then score. The screener tab now has a mode toggle between
+  "评分选股" (standard weighted-score) and "多策略交叉" (multi-strategy
+  intersection). A new `minStrategyHits` parameter controls the hit threshold.
+
 ## [0.5.0] - 2026-08-31
 
 ### Added
