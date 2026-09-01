@@ -3,6 +3,17 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.1] - 2026-09-01
+
+### Fixed
+
+- Watchlist entries added via the ☆ star button (search results, rank tables,
+  screener results) were stored with the stock code as their name, so the
+  watchlist table rendered the code twice (名称显示两个编号). The star button
+  now sends the stock name along with the code, the watchlist table prefers
+  the live quote name as a display fallback, and `/watchlist/add` also
+  refreshes the stored name of existing entries when a real name is provided.
+
 ## [0.6.0] - 2026-09-02
 
 ### Added
