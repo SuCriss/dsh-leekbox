@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- 主板 / 非主板池切换（market board pool toggle): the stocks rank tab gains
+  two new pools beside 沪深A股 — 主板 (SH main board 600/601/603/605 + SZ main
+  board 000/001/002/003, mid-board merged) and 非主板 (ChiNext 300/301 + STAR
+  688). The two pools exactly partition 沪深A股 (3486 + 2070 = 5556), so the
+  rank lists can now be filtered by board without leaving the tab. Routed
+  through the existing `node` parameter as `main` / `non_main` Eastmoney
+  universe selectors.
+
 ## [0.6.1] - 2026-09-01
 
 ### Fixed
