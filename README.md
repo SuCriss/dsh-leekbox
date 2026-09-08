@@ -11,7 +11,7 @@ A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 | Tab | 功能 |
 | --- | --- |
 | 📊 大盘 | 上证 / 深成 / 创业板 / 科创50 实时指数，30 秒自动刷新 |
-| 💹 行情 | 股票/ETF/转债/LOF 搜索（代码/名称/拼音）+ 多池榜单（沪深A股/主板/非主板/ETF·场内基金/可转债/LOF，按涨幅/成交额/换手/主力净流入）+ 板块榜 + 龙虎榜 |
+| 💹 行情 | 股票/ETF/转债/LOF 搜索（代码/名称/拼音首字母，本地索引毫秒级返回，带实时价格涨幅的下拉结果卡）+ 多池榜单（沪深A股/主板/非主板/ETF·场内基金/可转债/LOF，按涨幅/成交额/换手/主力净流入）+ 板块榜 + 龙虎榜 |
 | ⭐ 自选 | 自选股实时行情（持久化在 `$DSH_HOME/.leekbox-watchlist.json`），支持分组、一键 JSON 备份 / CSV 导出、从 JSON/CSV/文本导入（合并或覆盖） |
 | 🔍 选股 | 两种模式：**评分选股**（按价格/涨跌幅/换手率筛选 + 13 项技术信号勾选 + 加权评分排序）和 **多策略交叉选股**（7 个预设策略的并行交集，个股需同时命中多个策略，按命中数排序）|
 | 📰 快讯 | 新浪 / 东财 / 金十 三源聚合 7×24 快讯，来源可筛选，重要资讯红色高亮，60 秒自动刷新，可点相关股票直达详情 |
@@ -24,7 +24,7 @@ A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 
 - 实时行情 / 指数 / 分时 / K线：腾讯财经（qt.gtimg.cn / web.ifzq.gtimg.cn / ifzq.gtimg.cn）
 - 榜单 / 选股：东方财富（push2.eastmoney.com，多镜像自动回退）
-- 搜索：东方财富（searchadapter.eastmoney.com）
+- 搜索：本地全市场索引（东方财富 push2 clist 快照，约 8 千只标的，缓存 6 小时）+ 腾讯 smartbox 全拼兜底 + 批量实时行情（qt.gtimg.cn）；索引未就绪时自动回退东方财富 searchadapter
 - 7×24 快讯：新浪财经直播流（zhibo.sina.com.cn）+ 东方财富快讯（np-listapi.eastmoney.com）+ 金十数据（jin10.com）；重要资讯 = 各源官方标记（金十星标 / 新浪焦点）+ 关键词兜底（突发/重磅/重大/紧急/超预期）
 
 所有数据由插件服务端（web profile 内的 cordis 插件）代理抓取并标准化，浏览器端同源调用 `/api/leekbox/*`，仅限本机 loopback 访问。数据仅供研究参考，不构成投资建议。
@@ -48,6 +48,7 @@ mklink /J "$DSH_HOME\profiles\web\node_modules\dsh-leekbox" "<本包路径>"
 ## 结构
 
 - `lib/index.js` — 服务端 cordis 插件：`/api/leekbox/*` 路由 + 自选股持久化
+- `lib/search-index.js` — 本地全市场搜索索引（代码/名称/拼音首字母毫秒匹配）
 - `lib/client.js` — 浏览器端 bundle：侧边栏入口 + 行情面板（React）
 - `cordis.patch.yml` — 插件行注册（`dsh.bundle.patch`）
 
