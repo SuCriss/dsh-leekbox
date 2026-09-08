@@ -3,6 +3,16 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.2] - 2026-09-08
+
+### Changed
+
+- **K 线悬停信息改为跟随鼠标的浮窗**：移除图上方的固定图例条，鼠标悬停任意 K 线时
+  在光标旁弹出浮窗（靠近右/下边缘自动翻转，不遮挡十字光标），内容含日期、开/高/
+  低/收（涨跌着色）、量、MA5/MA10/MA20（均线配色）、压力位/支撑位。
+- **压力位/支撑位改为图上常驻曲线**（类似 MA 线画法）：逐日滚动计算（每日只用截
+  至当日的数据），红色为压力位、绿色为支撑位，随十字光标在历史各日平滑变化。
+
 ## [0.7.1] - 2026-09-08
 
 ### Added
