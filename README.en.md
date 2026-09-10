@@ -36,6 +36,11 @@ All requests are proxied by the plugin's host half (a cordis plugin inside the
 web profile) and served to the browser same-origin under `/api/leekbox/*`,
 loopback-only. For research reference only — not investment advice.
 
+## Requirements
+
+- DeepSeek Harness (DSH) **>= 0.1.1-rc.1** (declared in `package.json` as `dsh.engines.dsh`)
+- Runs in the **web profile** only (`dsh.client.platform: "web"`): the route host lives inside the DSH process, and the browser bundle talks to it same-origin under `/api/leekbox/*` (loopback only)
+
 ## Install
 
 ```sh

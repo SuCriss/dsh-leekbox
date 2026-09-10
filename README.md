@@ -29,6 +29,11 @@ A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 
 所有数据由插件服务端（web profile 内的 cordis 插件）代理抓取并标准化，浏览器端同源调用 `/api/leekbox/*`，仅限本机 loopback 访问。数据仅供研究参考，不构成投资建议。
 
+## 环境要求
+
+- DeepSeek Harness (DSH) **≥ 0.1.1-rc.1**（声明于 `package.json` 的 `dsh.engines.dsh`）
+- 仅运行于 **web profile**（`dsh.client.platform: "web"`）：服务端路由随宿主进程运行，浏览器端经同源 `/api/leekbox/*` 访问（仅限本机 loopback）
+
 ## 安装
 
 ```bash
