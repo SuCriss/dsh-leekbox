@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.2] - 2026-09-10
+
+### Docs
+
+- **声明宿主要求**：README（中/英）新增「环境要求」小节——DeepSeek Harness (DSH) **≥ 0.1.1-rc.1**（`dsh.engines.dsh`），仅运行于 **web profile**（`dsh.client.platform: "web"`），浏览器端经同源 `/api/leekbox/*` 访问（仅限 loopback）。仅文档变更，代码无改动。
+
 ## [0.8.1] - 2026-09-10
 
 ### Changed
