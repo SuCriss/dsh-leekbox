@@ -25,7 +25,7 @@ A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 - 实时行情 / 指数 / 分时 / K线：腾讯财经（qt.gtimg.cn / web.ifzq.gtimg.cn / ifzq.gtimg.cn）
 - 榜单 / 选股：东方财富（push2.eastmoney.com，多镜像自动回退）
 - 搜索：本地全市场索引（东方财富 push2 clist 快照，约 8 千只标的，缓存 6 小时）+ 腾讯 smartbox 全拼兜底 + 批量实时行情（qt.gtimg.cn）；索引未就绪时自动回退东方财富 searchadapter
-- 7×24 快讯：新浪财经直播流（zhibo.sina.com.cn）+ 东方财富快讯（np-listapi.eastmoney.com）+ 金十数据（jin10.com）；重要资讯 = 各源官方标记（金十星标 / 新浪焦点）+ 关键词兜底（突发/重磅/重大/紧急/超预期）
+- 7×24 快讯：新浪财经直播流（zhibo.sina.com.cn）+ 东方财富快讯（np-listapi.eastmoney.com）+ 金十数据（jin10.com）；重要资讯 = 各源官方标记（金十星标 / 新浪焦点）+ 关键词兜底（突发/重磅/重大/紧急/超预期）；跨源自动去重——同一事件多家源措辞不同（截断/扩写/换措辞）也按归一化文本 + 10 分钟时间窗内相似度合并为一条，保留信息最全的副本
 
 所有数据由插件服务端（web profile 内的 cordis 插件）代理抓取并标准化，浏览器端同源调用 `/api/leekbox/*`，仅限本机 loopback 访问。数据仅供研究参考，不构成投资建议。
 

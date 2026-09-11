@@ -30,7 +30,7 @@ comparison, close via ESC or the backdrop.
 - Realtime quotes / indices / K-line: Tencent Finance (qt.gtimg.cn, web.ifzq.gtimg.cn, ifzq.gtimg.cn)
 - Rankings / screener universe: Sina Finance (vip.stock.finance.sina.com.cn)
 - Search suggest: Eastmoney (searchadapter.eastmoney.com)
-- News: Sina zhibo stream + Eastmoney fast news (np-listapi.eastmoney.com) + Jin10 flashes
+- News: Sina zhibo stream + Eastmoney fast news (np-listapi.eastmoney.com) + Jin10 flashes; cross-source dedup merges the same event into one item even when worded differently
 
 All requests are proxied by the plugin's host half (a cordis plugin inside the
 web profile) and served to the browser same-origin under `/api/leekbox/*`,
