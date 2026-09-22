@@ -3,6 +3,21 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.5] - 2026-09-22
+
+### Fixed
+
+- **行情页整页取不到数（`rank feed unavailable`）**：东财对 clist 路由做**按出口 IP 的限流**——该路由返回 nginx 502（直连则是 TCP reset），而**同一主机**的其它路由（`ulist.np` / `stock/get` / `push2ex`）照常 200。实测 2026-09-22：push2 / push2delay / 全部编号镜像连续 20 分钟以上 502，而同一个 URL 经第三方中转（不同出口 IP）返回 200 且数据完整——所以既不是源站宕机，也不是参数写错。clist 是 rank / 板块 / 选股股票池 / 涨跌家数的共同上游，一处被限流就全线断供。
+  - 新增 `lib/sinarank.js` 备用源（新浪 `Market_Center`，返回同一套 legacy 行形状），`fetchEmRankPage` / `fetchEmSectorPage` 改为「东财优先 → 新浪兜底」。单位已用东财 `stock/get` 逐字段校准：`volume` 股→手（÷100）、`amount` 元→万元（÷1e4）、`mktcap`/`nmc` 本就是万元（1:1）、价格/涨跌幅/换手/pe/pb 1:1。覆盖 `hs_a / sh_a / sz_a / cyb / kcb / etf`。
+  - 新增 clist 熔断（60s 冷却）：clist 一挂就跳过重试，避免每次刷新都白等超时；冷却到期自动回探，东财一恢复就切回（它是 `主力净流入` 的唯一来源）。
+  - **备用源覆盖不到的部分明确报错而不是返回错数据**：`main` / `non_main` / `cb` / `lof` 四个池子新浪没有对应 node，`sort=netflow` 新浪没有该列，板块的 `f62` 排序同理——这些请求会带上原因失败。
+  - `/rank` 路由原本是**空 `catch`**，上游为什么挂完全看不到；现在记录原因并在响应里带 `reason` 字段。
+- **涨跌家数改走指数快照，单次请求取代 56 页全市场翻页**：`fetchEmBreadth` 此前逐页翻完 clist 全市场（`pz=100` → 56 个请求/次，14 并发），这个请求量正是触发上述 IP 限流的原因。现改用 `ulist.np` 的 `f104/f105/f106`（上证指数 + 深证成指 + 北证50 = 沪 + 深 + 北交所全量，实测 2319 + 2902 + 345 = 5566 家），**1 个请求**搞定，同时不再依赖被限流的 clist。失败语义不变：取不到就抛错，绝不返回假的 0/0。
+
+### Added
+
+- `rank-fallback-test.mjs`：16 项断言。含以 `stock/get` 为真值的单位校验（价格/成交量/成交额/总市值/流通市值逐字段比对），以及"覆盖不到的池子必须报错而非返回错数据"的负向断言。
+
 ## [0.8.4] - 2026-09-11
 
 ### Fixed
