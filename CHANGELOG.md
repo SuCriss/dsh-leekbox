@@ -3,6 +3,24 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- **数据取不到时报英文文案**：客户端把响应体里的 `error` 字段**原样渲染**到红色错误条上，而服务端一路抛的都是英文——`rank feed unavailable`、`all news feeds unavailable`、`instrument index: first page failed`、`expected ?code=sh600519` 等等。用户在行情页/板块页/快讯页/自选页看到的报错全是英文，既不知道是哪个榜挂了，也不知道要不要重试。现在从两端一起堵住：
+  - **服务端新增报错约定**（`lib/fetch-utils.js` 的 `feedError(message, detail)` / `userMessage(error)` / `errorDetail(error)`）：`message` 是给用户看的中文，一句话说清"什么没取到、要不要重试"；`detail` 是 host / node / sort / 上游字段名这类排查用的技术细节，**只进日志**（`fail()` 会写进响应的 `reason` 字段，界面不渲染它）。`lib/emrank.js`、`lib/index.js`、`lib/search-index.js`、`lib/screener.js` 里所有能透到浏览器的文案按这条约定改完，报错还会**点名是哪一个榜**：`主板榜暂时取不到：行情主源不可用，备用源没有这一项。请稍后重试或换个榜单看`、`主力净流入榜暂时取不到：…`，而不是原来那句看不出所以然的 `rank feed unavailable`。
+  - **服务端出口兜底**：`/rank`、`fail()` 等所有失败出口一律过 `userMessage()`——漏翻的英文（Node 内建 `ENOENT`/`ECONNRESET`、第三方库异常、上游直接透传）会被换成通用中文，真正原因留在 `reason` 里。也就是说**即使以后再有人写出英文文案，界面也不会漏出去**。
+  - **客户端兜住浏览器自己的报错**（`lib/client.js` 新增 `describeError()`）：以前 `fetch` 断网抛的 `TypeError: Failed to fetch`、超时中止抛的 `The operation was aborted.`、以及非 JSON 响应的兜底 `HTTP 502`，都会原封不动显示给用户。现在统一映射为「网络连接失败，请检查网络后重试」/「请求超时，请稍后重试」/「服务返回异常（HTTP 502）」，被替换掉的原文写进 `console.warn` 便于排查。`api()` 现在是最后一道闸：服务端漏翻的英文也会在这里被换成中文并带上状态码。13 处错误展示点（指数/榜单/板块/龙虎榜/自选/选股/快讯/个股详情/K线弹窗/导出）全部改走 `describeError`。
+  - **选股"任务已在运行"改用错误码判定**：`/screener` 路由此前靠正则匹配英文 `already running` 决定回 409；文案改中文后这类匹配会静默失效，改为 `error.code === "screener_already_running"`（保留正则兜底）。
+
+### Added
+
+- `error-text-test.mjs`：报错文案中文化的回归测试（59 项断言，无网络）。静态扫描服务端所有 4xx/5xx 响应的 `error` 字段必须是中文（动态拼接的必须过 `userMessage()`），抽取 `lib/client.js` 里**真实的那份** `describeError` 源码跑行为断言（断网/超时/HTTP 码/中文透传/未知英文），并断言"任何输出都不含纯英文"、客户端无 `setError(e.message)` 直通。
+
+### Changed
+
+- `verify-fixes.mjs`：新增 D3/D4 —— 直接驱动 `/rank` 路由断言**上游整体挂掉时 `error` 是纯中文、`reason` 保留技术细节**（这条正是本次修复的端到端验证）。同时修掉一个测试自身的坑：`lib/emrank.js` 的 clist 冷却窗口是模块级状态，前半段跑过真实网络后它一直生效，把后面用 stub 的 D1/D2 挡在 `fetch` 之前，导致「行映射」用例被误判成失败、脚本中途抛错（此前靠 60s 冷却自然到期，稳定性看运气）。现在 `lib/emrank.js` 导出 `resetClistCooldownForTests()`，测试显式复位，全套 21 项断言可稳定跑完。
+
 ## [0.8.5] - 2026-09-22
 
 ### Fixed
