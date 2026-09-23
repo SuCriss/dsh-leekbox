@@ -83,8 +83,16 @@ for (const [node, sort] of [["cb", "changepercent"], ["lof", "changepercent"], [
 		// 主源恢复时 netflow/主板 本来就应该成功，这不算失败
 		check(`node=${node} sort=${sort}`, page.rows.length > 0, `主源可用，正常返回 ${page.rows.length} 行`);
 	} catch (error) {
+		// 报错要分两层：message 是给用户看的中文（还得说清是哪个榜），
+		// detail 是给日志/排查用的技术原因（哪个源、哪个池子、哪个排序字段）。
 		const msg = error.message;
-		check(`node=${node} sort=${sort} 报错可诊断`, /no fallback|sina:/.test(msg), msg.slice(0, 130));
+		const detail = error.detail ?? "";
+		const named = sort === "netflow" ? /主力净流入/.test(msg) : /榜/.test(msg);
+		check(
+			`node=${node} sort=${sort} 报错可诊断`,
+			/[\u4e00-\u9fa5]/.test(msg) && named && /no sina fallback/.test(detail),
+			`${msg.slice(0, 60)} ｜ detail: ${detail.slice(0, 80)}`
+		);
 	}
 }
 

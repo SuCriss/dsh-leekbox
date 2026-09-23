@@ -128,7 +128,10 @@ process.on("exit", () => {
 		data: { total: 1, diff: [{ f12: "600519", f13: 1, f14: "贵州茅台", f2: 1500, f3: 2.5, f4: 36.5, f5: 12345, f6: 987654321, f8: 1.7, f9: 22, f10: 1.1, f17: 1490, f15: 1510, f16: 1480, f18: 1463.5, f20: 1.88e12, f21: 1.88e12, f23: 8.9, f62: 123456789 }] },
 	}), { status: 200, headers: { "content-type": "application/json" } });
 	try {
+		// 前面的用例跑过真实网络，模块级的 clist 熔断很可能已经处于冷却中，
+		// 而冷却会在 fetch 之前就抛错——这跟 D1/D2 要验的"行映射"无关，先复位。
 		const em = await import("./lib/emrank.js");
+		em.resetClistCooldownForTests();
 		const page = await em.fetchEmRankPage({ node: "hs_a", sort: "netflow", order: "desc", page: 1, size: 5 });
 		check("D1 rank row now carries netflow (f62)", page.rows[0].netflow === 123456789, `netflow=${page.rows[0].netflow}`);
 
@@ -140,6 +143,20 @@ process.on("exit", () => {
 		await rank.handler(req, res);
 		const body = JSON.parse(res.body);
 		check("D2 /rank route passes netflow through", body.rows?.[0]?.netflow === 123456789, `netflow=${body.rows?.[0]?.netflow}`);
+
+		// D3 上游整体挂掉时，/rank 返回的 error 必须是中文（界面直接渲染它，
+		// 以前这里是 "rank feed unavailable" 这种英文），技术细节走 reason。
+		globalThis.fetch = async () => new Response("bad gateway", { status: 502 });
+		const res2 = { code: null, body: null, writeHead(c) { this.code = c; }, end(b) { this.body = b; } };
+		const req2 = { method: "GET", url: "/api/leekbox/rank?node=hs_a&sort=changepercent&page=1&size=5", headers: { host: "127.0.0.1:1" }, socket: { remoteAddress: "127.0.0.1" }, async *[Symbol.asyncIterator]() { } };
+		await rank.handler(req2, res2);
+		const body2 = JSON.parse(res2.body);
+		check(
+			"D3 /rank outage returns a Chinese error (browser renders it verbatim)",
+			res2.code === 502 && /[\u4e00-\u9fa5]/.test(body2.error ?? "") && !/[a-z]{4,}/i.test(body2.error ?? ""),
+			`${res2.code} error="${body2.error}" reason="${String(body2.reason ?? "").slice(0, 60)}"`
+		);
+		check("D4 /rank keeps the technical reason for logs", typeof body2.reason === "string" && body2.reason.length > 0, String(body2.reason ?? "").slice(0, 90));
 	} finally { globalThis.fetch = origFetch; }
 }
 
