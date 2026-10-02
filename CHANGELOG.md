@@ -16,7 +16,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Security / CI / Tooling
 
 - **CI 补全语法检查与行为测试**：加入 `lib/search-index.js` 至 `node --check`；PR/推送自动跑 4 个 stubbed 回归测试（verify-fixes/pinyin/news-dedup/sentiment-score/error-text）排除有网络依赖的 screener-test.mjs/rank-fallback-test.mjs。
-- **本地脚本完善**：package.json 新增 `check`/`test`/`audit` 三脚本。
+- **本地脚本完善**：package.json 新增 `check`/`test` 二脚本。
+
+## [0.8.8] - 2026-10-02
+
+### Fixed
+
+- **v0.8.7 release 版本不一致**：release commit 漏 bump package.json 版本号，导致 tag v0.8.7 对应的实际代码仍是 0.8.6；同时 CHANGELOG 错误声称新增 `audit` 脚本。本发布纠正两者：版本 bump 到 0.8.8，CHANGELOG 更正为仅含 check/test 二脚本。
+- **资金流向字段错位**：lib/emrank.js 的 fflow kline 响应体中资金流顺序应为 date/main/xl/big/middle/small，原代码将 middle↔xl/big 位置互换，导致用户端柱状图中"中单/小单"完全颠倒；现已按 EM API 实际顺序修正映射。
 
 ## [0.8.6] - 2026-09-23
 
