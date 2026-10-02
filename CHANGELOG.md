@@ -3,6 +3,21 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.7] - 2026-10-02
+
+### Fixed
+
+- **成交额显示缩小 100 倍**：A 股榜单表格列头「成交额」使用 `fmtAmount()` 时未乘 10000（服务端返回万元），导致显示为"50.00 万”而非“50.00 亿”，现统一转换为元单位。
+- **自选股 >50 只行情静默丢失**：`/quote` 服务端保护栅栏限制单次请求 50 码，但自选列表无上限；此前超长部分永远无报价，现分片并发 fetch 再合并结果。
+- **板块列表无法翻页**：sector 数据硬编码 `page=1&size=30`；新增 `sectorPage`/`sectorPageSize` 状态与分页 UI（首页/上一页/下一页/末页 + 每页条数选择）。
+- **快速切换 stale response**：sector/longhu 加载时未做请求顺序守卫，板块 tab/龙虎榜 tab 快速切换会覆盖旧数据；news 双击"加载更多”也易重复请求。分别引入 `loadSeq`/`newsLoadSeq` 计数器守卫所有异步响应，more() 增加 loading 防抖判断。
+- **ScreenerTab 定时器泄漏**：组件卸载时清空调度器未执行，持续轮询 `/progress`；现通过 ref 记录 ID 并在 useEffect cleanup 中清除。
+
+### Security / CI / Tooling
+
+- **CI 补全语法检查与行为测试**：加入 `lib/search-index.js` 至 `node --check`；PR/推送自动跑 4 个 stubbed 回归测试（verify-fixes/pinyin/news-dedup/sentiment-score/error-text）排除有网络依赖的 screener-test.mjs/rank-fallback-test.mjs。
+- **本地脚本完善**：package.json 新增 `check`/`test`/`audit` 三脚本。
+
 ## [0.8.6] - 2026-09-23
 
 ### Fixed
