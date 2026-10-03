@@ -18,6 +18,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **CI 补全语法检查与行为测试**：加入 `lib/search-index.js` 至 `node --check`；PR/推送自动跑 4 个 stubbed 回归测试（verify-fixes/pinyin/news-dedup/sentiment-score/error-text）排除有网络依赖的 screener-test.mjs/rank-fallback-test.mjs。
 - **本地脚本完善**：package.json 新增 `check`/`test` 二脚本。
 
+## [0.8.10] - 2026-10-02
+
+### Changed
+
+- **K 线缓存 TTL 改为自适应**：原先是固定的 10 分钟常量，现按实测复用率动态调整（区间 5–30 分钟，起步 10 分钟）。连续扫描大量命中缓存说明扫描间隔够近，TTL 每次 ×1.25 上调；复用率掉下来说明缓存在过期数据上浪费请求，×0.8 下调。**冷启动不会被误缩**：首次扫描必然全 miss，若此时就缩 TTL 会形成"越缩越 miss"的死亡螺旋，因此下调前要求复用率 EMA 已见过真实复用（`MIN_BATCH_REUSES`），每 200 次 lookup 才评估一次以免单轮扫描抖动控制器。
+- 新增 `klineCacheStats()` 导出，供 `/meta` 与调试读取当前 TTL、批内命中率与复用率 EMA。缓存评估走结构化出口而非日志，日志通道保持干净。
+
+## [0.8.9] - 2026-10-02
+
+### Fixed
+
+- **选股池并发翻页产生重复行**：`buildUniverse` 以 5 页并发拉取，成交额排名在翻页间隙漂移会让同一只股票落进两页。重复行既浪费 K 线请求（每股一次），又让 `slice(limit)` 少给几只票。现按 code 去重并保留首次出现的条目（页序即金额序，即排名更靠前的那次）。
+- **`/rank` 日志通道**：失败分支此前把用户可见文案写进 `console.error`，与全仓约定的日志通道不一致。现改走注入的 `logger.warn`，内容用 `errorDetail()` 的技术细节（host/node/sort），中文用户文案仍只在响应的 `error` 字段里。
+
+### CI / Tooling
+
+- **verify-fixes.mjs C 段不再碰真实网络**：`/search` 冷启动超时用例此前会打到东财 suggest 线上接口，CI 里既慢又可能因限流抖动。现在 push2（指数构建）挂起以触发 3s 超时、suggest 返回桩数据、其余源一律抛错，并断言 hits 的形状（code/name/market）。挂起请求的计时器在段尾统一清除，避免 60s 计时器把测试进程拖住。
+- **screener-test.mjs 补断言与退出码**：此前只有 `console.log`，无论结果如何都返回 0，CI 看不出失败。现引入 `check()` 计数 scanned/candidates/computed/matched 之间的子集关系与逐行必填字段，失败置 `process.exitCode = 1`。耗时断言改用实测墙钟时间——`result.elapsed` 是 `"35s"` 这样的带单位字符串，拿它和毫秒阈值比较永远为 false。
+- **CI 加固**：`syntax-check`/`unit-tests`/`manifest` 拆成三个并行 job，各自加 `timeout-minutes`；`concurrency` 配 `cancel-in-progress` 让同分支的新推送作废旧运行；权限收紧为 `contents: read`；`setup-node` 开启 npm 缓存。
+
+### Release
+
+- 纠正 v0.8.9 标签发布时 package.json 未同步 bump 的版本不一致（当时仍停在 0.8.8），本版补上。
+
 ## [0.8.8] - 2026-10-02
 
 ### Fixed
