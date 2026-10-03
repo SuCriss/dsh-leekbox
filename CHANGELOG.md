@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Release
 
 - 纠正 v0.8.9 标签发布时 package.json 未同步 bump 的版本不一致（当时仍停在 0.8.8），本版补上。
+- 纠正 v0.8.9 把 `/rank` 的 `reason` 字段一并改成中文用户文案的失误：`reason` 是给排查用的技术细节通道（`errorDetail()`），应与 `logger.warn` 写进日志的内容一致；浏览器渲染的是 `error` 字段，`reason` 里塞中文并没有帮助用户，反而丢了定位上游哪个 host 挂掉的信息。现在 `error` 中文 / `reason` 技术细节 / 日志同一条技术细节，三者各归其位。
 
 ## [0.8.8] - 2026-10-02
 
