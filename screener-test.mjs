@@ -30,7 +30,7 @@ check("scanned count covers universe + buffer", result.scanned >= 120 && result.
 check("candidates filtered below score", result.candidates >= 0 && result.candidates <= result.scanned, `candidates=${result.candidates}, scanned=${result.scanned}`);
 check("computed non-negative subset of candidates", result.computed >= 0 && result.computed <= result.candidates, `computed=${result.computed}, candidates=${result.candidates}`);
 check("matched is non-negative subset", result.matched >= 0 && result.matched <= result.computed, `matched=${result.matched}, computed=${result.computed}`);
-check("elapsed under 60s (including network)", result.elapsed < 60_000, `elapsed=${result.elapsed}ms`);
+check("standard scan completed within wall-clock budget", Date.now() - t0 < 60_000, `wall=${Date.now() - t0}ms, reported=${result.elapsed}`);
 console.log("--- standard mode ---");
 console.log("elapsed:", result.elapsed, "ms", Date.now() - t0);
 console.log("scanned:", result.scanned, "candidates:", result.candidates, "computed:", result.computed, "matched:", result.matched);
