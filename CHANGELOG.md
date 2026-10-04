@@ -3,6 +3,19 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.11] - 2026-10-02
+
+### Added
+
+- **P0 宇宙增量刷新**：`GET /api/leekbox/universe?since=<builtAt>` 返回自上基线版本以来的增量（`added` 携带完整成形行、`removed` 为代码列表），基线缺失或超出保留的 10 个快照时以 412 `{ needsFullRefresh: true, currentBuiltAt }` 提示客户端回退全量；默认返回全量行，`?rows=false` 可只要元数据。`lib/search-index.js` 新增 `indexHistory` 快照环与 `getInstrumentIndexDelta()`（412 错误消息为中文、技术细节留 `reason`，与全仓错误文案约定一致）。
+- **P1 选股结果缓存**：`runScreener` 按归一化参数（require/strategies 排序后序列化）做 LRU 结果缓存（上限 500 条、TTL 15 分钟），命中直接返回 `cacheHit: true` + "Cached result (N stocks)"，不再重复打行情源；新增 `screenerCacheStats()` 结构化出口（total/hits/misses/hitRate）。
+- **P1 部分结果实时流出**：K 线抓取重构为逐到达评分（`fetchKlinesConcurrent(codes, onEach)`），每根序列取到即刻过 `scoreRow` 并推入 `_progress.partial`，前端轮询 progress 即可增量渲染，无需等整轮扫描结束。
+- **P2 选股进度 SSE 流**：`GET /api/leekbox/screener/stream` 以 250ms 尾随共享进度快照（单飞扫描保证无需任务 id），变化即发 `progress` 事件，扫描结束发 `done`（失败发 `error`）；含 15s 心跳注释帧与 5 分钟硬寿命上限，防代理断连与空闲泄漏。
+
+### Tests
+
+- 新增 4 个无网络回归测试并接入 `npm test` 与 CI：`p0-universe-delta-test.mjs`（快照环 + 增量/412）、`p1-screener-cache-test.mjs`（缓存命中零 fetch + 深比较）、`p1-p2-stream-test.mjs`（partial 单调增长直至收敛）、`p2-sse-route-test.mjs`（真实路由 handler 端到端：progress/done 帧、非回环 403）。
+
 ## [0.8.7] - 2026-10-02
 
 ### Fixed

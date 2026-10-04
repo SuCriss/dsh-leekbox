@@ -51,6 +51,10 @@ jobs:
           node news-dedup-test.mjs
           node sentiment-score-test.mjs
           node error-text-test.mjs
+          node p0-universe-delta-test.mjs
+          node p1-screener-cache-test.mjs
+          node p1-p2-stream-test.mjs
+          node p2-sse-route-test.mjs
         shell: bash
       - name: Log results for CI dashboard
         if: always()
