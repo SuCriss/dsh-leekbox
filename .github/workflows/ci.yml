@@ -20,7 +20,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
       - name: Syntax-check all lib modules
         run: |
           node --check lib/index.js
@@ -46,10 +45,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
       - name: Run stubbed regression tests (no network)
         run: |
-          npm install --if-present
           node verify-fixes.mjs
           node pinyin-test.mjs
           node news-dedup-test.mjs
