@@ -57,6 +57,18 @@ mklink /J "$DSH_HOME\profiles\web\node_modules\dsh-leekbox" "<本包路径>"
 - `lib/client.js` — 浏览器端 bundle：侧边栏入口 + 行情面板（React）
 - `cordis.patch.yml` — 插件行注册（`dsh.bundle.patch`）
 
+### 选股模块
+
+选股按职责拆成 5 个文件，`lib/screener.js` 是对外门面（`runScreener` / `screenerProgress` / `screenerMeta`）：
+
+- `lib/screener.js` — 编排层：股票池快照、逐只拉日K、基础条件过滤、排序与进度快照
+- `lib/indicators.js` — 纯指标数学（EMA/MACD/RSI/KDJ/SMA/BOLL/上穿判定），无 I/O
+- `lib/signals.js` — **信号与策略的唯一定义处**（权重、分组、文案、策略组成）+ 打分
+- `lib/screener-cache.js` — 结果缓存（LRU + 15 分钟 TTL）与日K缓存（自适应 TTL）
+- `lib/screener-validate.js` — 参数归一化 + 带 `error.code` 的校验异常
+
+`GET /api/leekbox/screener/meta` 下发信号/策略元数据，前端据此渲染勾选面板，服务端加信号时界面自动跟随（客户端仅保留离线兜底副本）。
+
 ## 免责声明
 
 本插件仅聚合公开免费行情接口，数据可能有延迟或缺失；所有内容仅供学习研究，不构成任何投资建议。股市有风险，入市需谨慎。

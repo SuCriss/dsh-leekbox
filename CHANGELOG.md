@@ -3,6 +3,35 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.12] - 2026-10-07
+
+### Changed
+
+- **选股模块按职责拆分**：原 722 行的 `lib/screener.js` 一个文件承担了股票池、K线取数、指标数学、信号、策略、结果缓存、进度与编排 8 件事。现拆为 5 个文件，`lib/screener.js` 保留为对外门面（`runScreener` / `screenerProgress` / `screenerCacheStats` / `klineCacheStats` / `screenerMeta` 签名与返回字段不变）：
+  - `lib/indicators.js` — 纯指标数学，无 I/O、无状态
+  - `lib/signals.js` — 信号与策略的唯一定义处（权重/分组/文案/策略组成）+ 打分
+  - `lib/screener-cache.js` — 结果缓存与日K缓存（含自适应 TTL）
+  - `lib/screener-validate.js` — 参数归一化 + 带 `error.code` 的校验异常
+  - `lib/screener.js` — 编排层（股票池 / 取数 / 过滤 / 排序 / 进度）
+- **路由不再自己抄一份参数表**：`POST /api/leekbox/screener` 原先在 `lib/index.js` 里重复实现了一遍字段清洗与默认值（与引擎各存一份，易漂移），现统一由 `screener-validate.js` 归一化，路由只做白名单过滤。
+
+### Added
+
+- **`GET /api/leekbox/screener/meta`**：下发信号/策略元数据（key、label、weight、group、desc、策略组成）。前端据此渲染勾选面板，服务端新增信号或改权重时界面自动跟随；客户端保留离线兜底副本，接口不可用时仍能渲染面板。
+
+### Fixed
+
+- **自适应 K 线 TTL 的批次计数永不归零**：`adjustKlineTTL()` 在查找次数不足 `TTL_BATCH_SIZE` 时提前 `return`，导致 `ttlHits`/`ttlMisses` 跨批次持续累积、`reuseEma` 永远算不出来。现改为累积到满一批才评估并归零，并补上"冷启动批次不得缩短 TTL"的回归测试。
+- **结果缓存统计语义**：写入缓存时累加的是 `misses`，把"写"记成了"未命中"。现拆出 `stores`（`misses` 字段为兼容旧监控面板保留同值），并新增 `evictions`。
+- **结果缓存淘汰不是 LRU**：原先按插入顺序 `shift()`，命中不回迁位置，热键会被冷键挤掉。现用 `Map` 实现真正的 LRU，并顺手摘除过期条目。
+- **KDJ 与 BOLL 的 O(n²) 计算**：`kdj()` 每根 K 线都 slice 一次窗口再 spread 求 min/max，`boll()` 每个下标重算一遍方差。现分别改用单调队列与滚动 sum/sumSq，降为 O(n)；经 7.2 万采样点对比，最大绝对误差 2.5e-11（仅浮点累加误差）。`boll()` 同时把浮点误差导致的负方差钳到 0，避免 `sqrt(负数)` 顺着信号链污染评分。
+- **路由靠正则匹配中文文案判 400**：`/^(未知|multi 模式)/` 一旦改动提示语就会让 400 静默退化成 502。现改为按 `error.code`（`screener_invalid_params` / `screener_already_running`）分流。
+
+### Tests
+
+- 新增 `indicators-equiv-test.mjs`（把重构前的 O(n²) 实现内联为参照物，4.5 万采样点逐点对比 kdj/boll；含"旧高点滑出窗口"的决定性断言与反证）、`kline-ttl-coldstart-test.mjs`（必须在全新进程验：复用率 EMA 是模块级状态）、`screener-meta-test.mjs`（抽取客户端真实 `buildScreenMeta` 源码跑断言，含"服务端新增信号自动出现在面板"与路由错误码分流端到端），并接入 `npm test`。
+- CI 的 `node --check` 补全 4 个新模块（7 → 11 个），无网络套件补全 3 个新测试（9 → 12 个）——原先新模块与新测试都不在 CI 覆盖范围内。
+
 ## [0.8.11] - 2026-10-02
 
 ### Added

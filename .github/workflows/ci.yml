@@ -28,9 +28,13 @@ jobs:
           node --check lib/fetch-utils.js
           node --check lib/emrank.js
           node --check lib/screener.js
+          node --check lib/screener-validate.js
+          node --check lib/screener-cache.js
+          node --check lib/signals.js
+          node --check lib/indicators.js
           node --check lib/search-index.js
           node --check lib/sinarank.js
-          echo "✓ All 7 lib modules pass syntax check"
+          echo "✓ All 11 lib modules pass syntax check"
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -52,7 +56,10 @@ jobs:
           node sentiment-score-test.mjs
           node error-text-test.mjs
           node p0-universe-delta-test.mjs
+          node indicators-equiv-test.mjs
           node p1-screener-cache-test.mjs
+          node kline-ttl-coldstart-test.mjs
+          node screener-meta-test.mjs
           node p1-p2-stream-test.mjs
           node p2-sse-route-test.mjs
         shell: bash
