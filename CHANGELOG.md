@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.13] - 2026-10-07
+
+### Changed
+
+- **版本号对齐发布**：`v0.8.12` 的 tag 是在 CI 修复提交（`ad52a79`）之后才创建的，那次发版号的 release 说明里虽然写了 CI 修复，但版本号本身没有独立覆盖它的发布记录。本次 bump 到 `0.8.13` 把 CI 修复单独作为一个可见版本发布；代码与 `v0.8.12` 完全一致（两者 diff 仅含版本号与 CHANGELOG）。
+
 ## [0.8.12] - 2026-10-07
 
 ### Changed
