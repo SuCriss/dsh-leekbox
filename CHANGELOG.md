@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.2] - 2026-10-09
+
+### Fixed
+
+- **大盘页"上涨/下跌"家数空白**：东财对 push2 域的 `ulist.np` / `clist` / `stock.kline` 路由做了连接级封锁（TLS 握手后直接 RST，同域 `stock/get` 照常 200；curl/浏览器 UA/换 host 都一样），指数快照取涨跌家数的路线全线失效，`/sentiment` 的 `up/down/flat/marketTotal` 降级为 null，前端渲染成"—"。主源换成与涨停/跌停池同域同签名的**涨跌分布接口**（push2ex `getTopicZDFenBu`）：`fenbu` 的涨跌幅整数桶正数累加=上涨、负数=下跌、"0"=平盘，口径与涨停池逐家吻合（±11 桶 69/8 = limitUp/limitDown），合计 5362 家（与 ulist 口径 5566 的差异为排除停牌）。ulist.np 指数快照保留为备源，上游解封后自动回落；两个源都失败才抛错，"绝不返回假的 0/0"的语义不变。
+
 ## [0.10.1] - 2026-10-09
 
 ### Changed
