@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - **CI 的测试清单手抄漂移**：`ci.yml` 的 `unit-tests` job 把 `package.json` 的 `scripts.test` 手抄了一遍，抄漏 3 个——`p0-position-alerts-test.mjs`（持仓/预警写锁端到端）、`p0-minute-fflow-test.mjs`（分时+资金流数据形状）、`p1-f10-longhu-test.mjs`（F10/龙虎榜字段映射）。它们在本地 `npm test` 一直是绿的，却从未在 CI 上跑过，等于 P0/P1 那几批改动少了 CI 保护。现在该 job 直接 `npm test`，`scripts.test` 成为唯一来源，新增测试不再需要同步改 workflow。
+- **esbuild 产物的跨平台差异**：新增的 bundle 新鲜度检查在 ubuntu 上必红——同版本 esbuild（0.28.2）、输入逐字节一致、metafile 里 14 个输入两边都判为 `esm`，但 win32 原生二进制会在 ESM→CJS 产物开头补一行 `"use strict";`，linux 不补，差 14 字节。`build.mjs` 改为 `write:false` + 插件合成 banner/footer 落盘，并剥掉这行：它落在 banner 的 `var module / var exports` 之后，已不在函数体的指令序言位置，只是个无效字符串表达式（拆分前手写的 bundle 里也没有），剥掉语义不变，产物在任何平台逐字节一致。新鲜度检查失败时现在会把 `git diff` 前 60 行、esbuild/node 版本、文件 sha 一并写进 step summary 与 `::error::` annotation（annotation 走公开 API 可读，job 日志需要仓库权限）——这次的根因就是靠它定位的。
 
 ### Tests
 
