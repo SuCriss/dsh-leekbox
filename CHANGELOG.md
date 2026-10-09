@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **客户端拆分为多文件源码 + esbuild 构建链**：3661 行的 `lib/client.js` 单文件按原 region 边界拆成 `src/client/` 下 14 个职责文件（react 桥接 / 样式 / API 与格式化 core / 星标 / 情绪仪表 / 大盘·行情·自选·选股·快讯五个页签 / 个股详情弹窗 / 主面板 / 侧边栏入口 / 插件入口），`build.mjs` 用 esbuild 打包回单文件产物——react / react-dom/client 保持 external（宿主 ModuleLoader 注入，杜绝双 React），产物继续提交进仓库，`npm run build` 重建、`npm run dev` watch。跨页签复用的 `fmtYi`（元→亿）上移到 core，顺带发现并删掉了从未使用的 `useMemo` 解构。运行时依赖依旧为零，esbuild 仅 devDependencies。
 
+### Fixed
+
+- **CI 的测试清单手抄漂移**：`ci.yml` 的 `unit-tests` job 把 `package.json` 的 `scripts.test` 手抄了一遍，抄漏 3 个——`p0-position-alerts-test.mjs`（持仓/预警写锁端到端）、`p0-minute-fflow-test.mjs`（分时+资金流数据形状）、`p1-f10-longhu-test.mjs`（F10/龙虎榜字段映射）。它们在本地 `npm test` 一直是绿的，却从未在 CI 上跑过，等于 P0/P1 那几批改动少了 CI 保护。现在该 job 直接 `npm test`，`scripts.test` 成为唯一来源，新增测试不再需要同步改 workflow。
+
 ### Tests
 
 - 新增 `client-bundle-test.mjs` 并接入 `npm test`（15 → 16 个）：桩 React 跑 factory，卡住产物契约——ModuleLoader 包装 / 插件 id / `require("react")` 各恰 1 处未内联 / 导出 `{apply, inject}`。

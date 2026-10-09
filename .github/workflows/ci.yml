@@ -69,21 +69,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      # 直接走 npm test：package.json 的 scripts.test 是测试清单的唯一来源。
+      # 这里曾经手抄了一份同样的列表，抄漏了三个（p0-position-alerts /
+      # p0-minute-fflow / p1-f10-longhu）——它们在本地 npm test 里一直是绿的，
+      # 却从没在 CI 上跑过。新增测试时不用再回来改这个文件。
+      # 测试全部无网络、且不需要 node_modules（client-bundle-test 只读产物），
+      # 所以本 job 不需要 npm ci。
       - name: Run stubbed regression tests (no network)
-        run: |
-          node verify-fixes.mjs
-          node pinyin-test.mjs
-          node news-dedup-test.mjs
-          node sentiment-score-test.mjs
-          node error-text-test.mjs
-          node client-bundle-test.mjs
-          node p0-universe-delta-test.mjs
-          node indicators-equiv-test.mjs
-          node p1-screener-cache-test.mjs
-          node kline-ttl-coldstart-test.mjs
-          node screener-meta-test.mjs
-          node p1-p2-stream-test.mjs
-          node p2-sse-route-test.mjs
+        run: npm test
         shell: bash
       - name: Log results for CI dashboard
         if: always()
