@@ -54,10 +54,35 @@ jobs:
         run: npm run build
       - name: Committed bundle must match sources
         run: |
-          if ! git diff --exit-code --stat lib/client.js; then
-            echo "::error::lib/client.js is stale — edit src/client/* and run npm run build, then commit the result"
-            exit 1
+          rc=0
+          git diff --quiet lib/client.js || rc=$?
+          if [ "$rc" -eq 0 ]; then
+            echo "✓ 提交的 lib/client.js 与源码重建结果一致"
+            exit 0
           fi
+          # 诊断：产物过期时把差异直接说出来（annotation 走公开 API 可读，
+          # 而 job 日志需要仓库权限），否则 CI 红了却看不到差在哪。
+          INFO=$( {
+            echo "git diff exit=$rc"
+            git --version
+            node -p "'node '+process.version+' '+process.platform"
+            node -p "'esbuild '+require('esbuild/package.json').version"
+            echo "core.autocrlf=$(git config core.autocrlf)"
+            git check-attr -a lib/client.js
+            node -e "const b=require('fs').readFileSync('lib/client.js');let cr=0;for(const x of b)if(x===13)cr++;console.log('size='+b.length+' CR='+cr+' sha='+require('crypto').createHash('sha256').update(b).digest('hex').slice(0,16))"
+            git diff --numstat lib/client.js
+            git diff --text lib/client.js | head -60
+          } 2>&1 )
+          printf '%s\n' "$INFO"
+          {
+            echo '### lib/client.js 与源码重建结果不一致'
+            echo '```diff'
+            printf '%s\n' "$INFO"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          ONE=$(printf '%s' "$INFO" | tr -d '\r' | tr '\n' '~' | cut -c1-1200)
+          echo "::error::lib/client.js 过期或与本机产物不一致（改 src/client/* 后请 npm run build 并提交）:: $ONE"
+          exit 1
 
   unit-tests:
     runs-on: ubuntu-latest
