@@ -212,6 +212,25 @@ const badRes = makeRes();
 await alertsAdd.handler(badReq, badRes);
 assert.strictEqual(badRes.statusCode, 403, "non-loopback alert add must be 403");
 
+console.log("== 6) write lock: concurrent adds all land ==");
+// 20 个并发 add(不同代码):写锁串行化读-改-写,断言 20 条全部落盘且每个
+// 响应都反映自己的新增——若将来有人在 mutation 里引入 await 又没走锁,
+// 这里的不变量会先红。
+const concurrent = Array.from({ length: 20 }, (_, i) => {
+	const res2 = makeRes();
+	return watchAdd
+		.handler(makePost(ROUTES.watchlist + "/add", { code: `sz0001${String(i).padStart(2, "0")}`.slice(0, 8), name: `并发${i}` }), res2)
+		.then(() => ({ status: res2.statusCode, body: json(res2) }));
+});
+const results = await Promise.all(concurrent);
+assert.ok(results.every((r) => r.status === 200), `every concurrent add must be 200: ${results.map((r) => r.status).join(",")}`);
+const finalList = results[results.length - 1].body.watchlist;
+const concurrentCodes = results.map((r) => r.body.watchlist.find((e) => e.name.startsWith("并发"))?.code);
+assert.strictEqual(finalList.length, 4 + 20, "final list must contain every concurrent addition (4 earlier + 20 new)");
+for (const code of concurrentCodes) {
+	assert.ok(code !== undefined && finalList.some((e) => e.code === code), `concurrent addition ${code} must survive in the final list`);
+}
+
 rmSync(home, { recursive: true, force: true });
 console.log("\n✅ P0 TEST PASSED: position fields + alerts routes work end to end");
 process.exit(0);

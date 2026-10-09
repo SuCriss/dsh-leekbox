@@ -3,6 +3,21 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.0] - 2026-10-09
+
+### Added
+
+- **个股 F10 财务摘要**：个股详情弹窗在资金流向之后新增「财务摘要」卡片——最近 8 个报告期的 营收/归母净利（亿元）+ 同比、ROE（加权）、销售毛利率、资产负债率、基本每股收益，最新报告期在前。数据走东财 F10 datacenter 报表（`RPT_F10_FINANCE_MAINFINADATA`，字段形状已对 live API 核验），新 `fetchEmF10Main()`（双主机回退 + 退避重试，SECUCODE 过滤支持 sh/sz/bj）与 `GET /api/leekbox/f10` 路由（财报低频变化：每 code 缓存 1 小时，LRU 上限 80 只）；取数失败静默——财务面是增强信息，不挡主行情。
+
+### Changed
+
+- **自选股 / 预警写操作串行化**：add/remove/import 与预警 add/remove 都是"读→改→写"三步，原子改名只能防文件写坏、防不了并发丢更新。新增 `makeListLock()` 写锁（Promise 链），自选股与预警各自的 mutation 全部串行执行——每个读改写周期看到上一个的结果，抛错的 mutation 不断链。`/watchlist/add` 的参数校验与 `/import` 的解析留在锁外，400 分流不受影响；预警的去重/上限检查移入锁内（否则两个并发 add 会双双通过检查）。
+
+### Tests
+
+- 新增 `p1-f10-longhu-test.mjs` 并接入 `npm test`（14 → 15 个）：F10 字段映射与 live API 形状逐字段对齐（含 bj 代码 `.BJ` SECUCODE、负同比保留符号、中文错误文案）、`/f10` 每 code 缓存命中零重取、`/longhu` 榜单行形状与当日数据首试即中。
+- `p0-position-alerts-test.mjs` 补第 6 节：20 个并发 add（不同代码）全部落盘且每个响应反映自己的新增——写锁的并发不变量回归。
+
 ## [0.9.0] - 2026-10-08
 
 ### Added

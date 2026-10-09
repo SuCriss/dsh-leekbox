@@ -25,7 +25,9 @@ bars + prev-close baseline with a relative-% right axis and hover tooltip),
 candlestick K-line — forward-adjusted (qfq), day/week/month/5m/30m, with
 MA5/10/20 overlays, volume subchart, last-price line and a hover crosshair
 legend — plus a **main money-flow bar chart** (last 15 days, inflow red /
-outflow green, hover shows the day's net inflow) over the flow detail table.
+outflow green, hover shows the day's net inflow) over the flow detail table,
+and an **F10 fundamentals card** (last 8 report periods: revenue / net profit
+with YoY, weighted ROE, gross margin, debt ratio, EPS — Eastmoney F10 feed).
 Popups are draggable, can be stacked for comparison, close via ESC or the
 backdrop.
 
