@@ -72,6 +72,7 @@ jobs:
             node -e "const b=require('fs').readFileSync('lib/client.js');let cr=0;for(const x of b)if(x===13)cr++;console.log('size='+b.length+' CR='+cr+' sha='+require('crypto').createHash('sha256').update(b).digest('hex').slice(0,16))"
             git diff --numstat lib/client.js
             git diff --text lib/client.js | head -60
+            node -e 'const e=require("esbuild");console.log("CWD="+process.cwd());console.log("PKGTYPE="+require("./package.json").type);e.build({entryPoints:["src/client/entry.js"],bundle:true,format:"cjs",platform:"browser",external:["react","react-dom/client"],metafile:true,write:false,charset:"utf8",target:"esnext"}).then(r=>{for(const [k,v] of Object.entries(r.metafile.inputs))console.log("INPUT "+k+" fmt="+v.format);const t=new TextDecoder().decode(r.outputFiles[0].contents);console.log("HEAD_NOBANNER="+JSON.stringify(t.split("\n").slice(0,3)));});'
           } 2>&1 )
           printf '%s\n' "$INFO"
           {
