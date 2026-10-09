@@ -9,7 +9,7 @@ Click the 🥬 entry in the DSH sidebar to open the dashboard.
 | --- | --- |
 | 📊 大盘 | SSE / SZSE / ChiNext / STAR50 realtime indices, 30s auto-refresh |
 | 💹 行情 | Search stocks / ETFs / convertible bonds / LOFs (code, name, pinyin) + multi-pool boards (A-share / ETF / convertible bond / LOF, by gain, amount, turnover or main net inflow) + sector boards + dragon-tiger list |
-| ⭐ 自选 | Persistent watchlist with realtime quotes (`$DSH_HOME/.leekbox-watchlist.json`), grouped; one-click JSON backup / CSV export, import from JSON/CSV/text (merge or replace) |
+| ⭐ 自选 | Persistent watchlist with realtime quotes (`$DSH_HOME/.leekbox-watchlist.json`), grouped; **position cost & live P/L** (click the qty/cost cells to edit inline; live floating P/L + return % + a summary bar), **price alerts** (🔔 per-row button: price above/below, % move thresholds; watched during trading hours, toast + desktop notification + beep on trigger, then auto-removed; persisted in `$DSH_HOME/.leekbox-alerts.json`); one-click JSON backup / CSV export (position fields included), import from JSON/CSV/text (merge or replace) |
 | 🔍 选股 | Multi-signal screener over the whole market: pool + basic filters + technical signals, weighted score ranking |
 | 📰 快讯 | 7x24 news aggregated from Sina, Eastmoney and Jin10, filterable by source; important items highlighted in red |
 
@@ -19,11 +19,15 @@ broken-board counts, whole-market up/down breadth, a consecutive-board ladder
 (click a name to open its detail popup).
 
 Clicking any stock name (including in the watchlist) opens a dedicated detail
-popup window, Tonghuashun-style: large price header, 15 live indicators, and
+popup window, Tonghuashun-style: large price header, 15 live indicators, an
+**intraday minute chart** (price line + volume-weighted average line + volume
+bars + prev-close baseline with a relative-% right axis and hover tooltip),
 candlestick K-line — forward-adjusted (qfq), day/week/month/5m/30m, with
 MA5/10/20 overlays, volume subchart, last-price line and a hover crosshair
-legend. No intraday minute chart. Popups are draggable, can be stacked for
-comparison, close via ESC or the backdrop.
+legend — plus a **main money-flow bar chart** (last 15 days, inflow red /
+outflow green, hover shows the day's net inflow) over the flow detail table.
+Popups are draggable, can be stacked for comparison, close via ESC or the
+backdrop.
 
 ## Data sources
 

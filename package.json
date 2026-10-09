@@ -1,7 +1,7 @@
 {
   "name": "dsh-leekbox",
-  "version": "0.8.13",
-  "description": "韭菜盒子 LeekBox — A股看盘助手：实时行情、毫秒级全市场搜索（代码/名称/拼音首字母+实时价格）、大盘指数、个股详情弹窗（同花顺式K线·前复权）、自选股、条件选股（评分选股+多策略交叉选股）、三源聚合7x24快讯、市场情绪温度计（连板梯队/炸板率/涨跌家数）、ETF/可转债/LOF。Runs as a DSH web client plugin.",
+  "version": "0.9.0",
+  "description": "韭菜盒子 LeekBox — A股看盘助手：实时行情、毫秒级全市场搜索（代码/名称/拼音首字母+实时价格）、大盘指数、个股详情弹窗（当日分时图·资金流向柱状图·同花顺式K线·前复权）、自选股（持仓成本+实时盈亏+价格预警）、条件选股（评分选股+多策略交叉选股）、三源聚合7x24快讯、市场情绪温度计（连板梯队/炸板率/涨跌家数）、ETF/可转债/LOF。Runs as a DSH web client plugin.",
   "keywords": [
     "dsh",
     "dsh-plugin",
@@ -20,7 +20,7 @@
   },
   "scripts": {
     "check": "node --check lib/index.js && node --check lib/client.js && node --check lib/fetch-utils.js && node --check lib/emrank.js && node --check lib/screener.js && node --check lib/screener-validate.js && node --check lib/screener-cache.js && node --check lib/signals.js && node --check lib/indicators.js && node --check lib/search-index.js && node --check lib/sinarank.js",
-    "test": "node verify-fixes.mjs && node pinyin-test.mjs && node news-dedup-test.mjs && node sentiment-score-test.mjs && node error-text-test.mjs && node p0-universe-delta-test.mjs && node indicators-equiv-test.mjs && node p1-screener-cache-test.mjs && node kline-ttl-coldstart-test.mjs && node screener-meta-test.mjs && node p1-p2-stream-test.mjs && node p2-sse-route-test.mjs"
+    "test": "node verify-fixes.mjs && node pinyin-test.mjs && node news-dedup-test.mjs && node sentiment-score-test.mjs && node error-text-test.mjs && node p0-universe-delta-test.mjs && node p0-position-alerts-test.mjs && node p0-minute-fflow-test.mjs && node indicators-equiv-test.mjs && node p1-screener-cache-test.mjs && node kline-ttl-coldstart-test.mjs && node screener-meta-test.mjs && node p1-p2-stream-test.mjs && node p2-sse-route-test.mjs"
   },
   "dsh": {
     "engines": {
