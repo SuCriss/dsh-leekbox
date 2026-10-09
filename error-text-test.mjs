@@ -74,7 +74,8 @@ for (const file of throwFiles) {
 //#region 3. 客户端：describeError 行为
 console.log("\n— 客户端 describeError —");
 const clientSrc = read("lib/client.js");
-const start = clientSrc.indexOf("const ERR_FALLBACK");
+// bundle 锚点：esbuild 会把模块顶层 const 降级成 var，所以锚点不写 const/var 前缀。
+const start = clientSrc.indexOf("ERR_FALLBACK = ");
 const end = clientSrc.indexOf("async function api(", start);
 if (start < 0 || end <= start) throw new Error("client.js markers not found");
 // 跑的是文件里真实的那份源码，不是手抄副本。

@@ -55,7 +55,7 @@ mklink /J "$DSH_HOME\profiles\web\node_modules\dsh-leekbox" "<本包路径>"
 
 - `lib/index.js` — 服务端 cordis 插件：`/api/leekbox/*` 路由 + 自选股持久化
 - `lib/search-index.js` — 本地全市场搜索索引（代码/名称/拼音首字母毫秒匹配）
-- `lib/client.js` — 浏览器端 bundle：侧边栏入口 + 行情面板（React）
+- `lib/client.js` — 浏览器端 bundle：侧边栏入口 + 行情面板（React）。**构建产物，勿手改**——源码在 `src/client/`（14 个职责文件），`npm run build` 用 esbuild 打包生成（`npm run dev` 为 watch 模式）；react 由宿主注入，不进 bundle
 - `cordis.patch.yml` — 插件行注册（`dsh.bundle.patch`）
 
 ### 选股模块

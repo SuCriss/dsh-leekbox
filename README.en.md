@@ -68,7 +68,7 @@ Refresh the page after install. Host-side changes need a DSH restart.
 ## Structure
 
 - `lib/index.js` — host half: `/api/leekbox/*` routes + watchlist persistence
-- `lib/client.js` — browser bundle: sidebar entry + dashboard panel (React)
+- `lib/client.js` — browser bundle: sidebar entry + dashboard panel (React). **Generated, do not hand-edit** — sources live in `src/client/` (14 single-responsibility files), bundled with esbuild via `npm run build` (`npm run dev` for watch mode); React is injected by the host and never bundled
 - `lib/screener.js` — screener engine (indicators computed from daily K-line)
 - `cordis.patch.yml` — plugin roster registration (`dsh.bundle.patch`)
 

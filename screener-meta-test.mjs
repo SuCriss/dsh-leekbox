@@ -12,8 +12,12 @@ import { readFileSync } from "node:fs";
 import { screenerMeta } from "./lib/signals.js";
 
 const clientSrc = readFileSync(new URL("./lib/client.js", import.meta.url), "utf8");
-const start = clientSrc.indexOf("const SIGNAL_HINT");
-const end = clientSrc.indexOf("const NODE_CHIPS", start);
+// bundle 锚点：esbuild 会把模块顶层 const 降级成 var，锚点不带 const 前缀。
+// end 必须用整条声明语句的开头（把 var 也让出去），否则切片末尾留个 dangling
+// "var "，new Function 直接 SyntaxError。
+const start = clientSrc.indexOf("SIGNAL_HINT = {");
+const endM = /(?:var|const|let) NODE_CHIPS = \[/.exec(start < 0 ? "" : clientSrc.slice(start));
+const end = endM === null ? -1 : start + endM.index;
 if (start < 0 || end <= start) throw new Error("client.js 标记找不到（buildScreenMeta 区域）");
 // 跑的是文件里真实的那份源码（含兜底常量），不是手抄副本。
 const { buildScreenMeta } = new Function(`${clientSrc.slice(start, end)}\nreturn { buildScreenMeta };`)();

@@ -3,8 +3,10 @@
 import { readFileSync } from "node:fs";
 
 const src = readFileSync(new URL("./lib/client.js", import.meta.url), "utf8");
-const start = src.indexOf("const SENTI_TIERS");
-const end = src.indexOf("/** 大盘页市场情绪卡");
+// bundle 锚点：esbuild 会把模块顶层 const 降级成 var、剥掉非 legal 注释，
+// 所以首尾锚点都用「标识符 = / 函数声明」形式，不带 const 前缀、不依赖注释。
+const start = src.indexOf("SENTI_TIERS = [");
+const end = src.indexOf("function SentimentCard(", start);
 if (start < 0 || end < 0 || end <= start) throw new Error("markers not found");
 const snippet = src.slice(start, end);
 const { sentiScore, sentiTier } = new Function(`${snippet}\nreturn { sentiScore, sentiTier };`)();

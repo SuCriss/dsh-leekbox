@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **客户端拆分为多文件源码 + esbuild 构建链**：3661 行的 `lib/client.js` 单文件按原 region 边界拆成 `src/client/` 下 14 个职责文件（react 桥接 / 样式 / API 与格式化 core / 星标 / 情绪仪表 / 大盘·行情·自选·选股·快讯五个页签 / 个股详情弹窗 / 主面板 / 侧边栏入口 / 插件入口），`build.mjs` 用 esbuild 打包回单文件产物——react / react-dom/client 保持 external（宿主 ModuleLoader 注入，杜绝双 React），产物继续提交进仓库，`npm run build` 重建、`npm run dev` watch。跨页签复用的 `fmtYi`（元→亿）上移到 core，顺带发现并删掉了从未使用的 `useMemo` 解构。运行时依赖依旧为零，esbuild 仅 devDependencies。
+
+### Tests
+
+- 新增 `client-bundle-test.mjs` 并接入 `npm test`（15 → 16 个）：桩 React 跑 factory，卡住产物契约——ModuleLoader 包装 / 插件 id / `require("react")` 各恰 1 处未内联 / 导出 `{apply, inject}`。
+- 抽产物源码的三个测试锚点改为与 bundler 无关的形式：esbuild 会把模块顶层 `const` 降级为 `var` 并剥离注释，`sentiment-score-test.mjs` 的注释锚点改为 `function SentimentCard(`，`error-text-test.mjs` / `screener-meta-test.mjs` 的锚点去掉 `const` 前缀（后者 end 锚点按整条声明语句对齐，避免 dangling `var`）。
+- CI 新增 `client-bundle` job：`npm ci`（lockfile 已入库，npm 缓存恢复）→ `npm run build` → `git diff --exit-code`，提交过时产物直接红。
+
 ## [0.10.0] - 2026-10-09
 
 ### Added

@@ -19,8 +19,11 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "check": "node --check lib/index.js && node --check lib/client.js && node --check lib/fetch-utils.js && node --check lib/emrank.js && node --check lib/screener.js && node --check lib/screener-validate.js && node --check lib/screener-cache.js && node --check lib/signals.js && node --check lib/indicators.js && node --check lib/search-index.js && node --check lib/sinarank.js",
-    "test": "node verify-fixes.mjs && node pinyin-test.mjs && node news-dedup-test.mjs && node sentiment-score-test.mjs && node error-text-test.mjs && node p0-universe-delta-test.mjs && node p0-position-alerts-test.mjs && node p0-minute-fflow-test.mjs && node indicators-equiv-test.mjs && node p1-screener-cache-test.mjs && node p1-f10-longhu-test.mjs && node kline-ttl-coldstart-test.mjs && node screener-meta-test.mjs && node p1-p2-stream-test.mjs && node p2-sse-route-test.mjs"
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch",
+    "prepack": "npm run build",
+    "check": "node --check lib/index.js && node --check lib/client.js && node --check lib/fetch-utils.js && node --check lib/emrank.js && node --check lib/screener.js && node --check lib/screener-validate.js && node --check lib/screener-cache.js && node --check lib/signals.js && node --check lib/indicators.js && node --check lib/search-index.js && node --check lib/sinarank.js && node --check build.mjs && node --check src/client/react.js && node --check src/client/styles.js && node --check src/client/core.js && node --check src/client/star.js && node --check src/client/sentiment.js && node --check src/client/indices-tab.js && node --check src/client/market-tab.js && node --check src/client/watchlist-tab.js && node --check src/client/screener-tab.js && node --check src/client/news-tab.js && node --check src/client/detail.js && node --check src/client/panel.js && node --check src/client/sidebar.js && node --check src/client/entry.js",
+    "test": "node verify-fixes.mjs && node pinyin-test.mjs && node news-dedup-test.mjs && node sentiment-score-test.mjs && node error-text-test.mjs && node client-bundle-test.mjs && node p0-universe-delta-test.mjs && node p0-position-alerts-test.mjs && node p0-minute-fflow-test.mjs && node indicators-equiv-test.mjs && node p1-screener-cache-test.mjs && node p1-f10-longhu-test.mjs && node kline-ttl-coldstart-test.mjs && node screener-meta-test.mjs && node p1-p2-stream-test.mjs && node p2-sse-route-test.mjs"
   },
   "dsh": {
     "engines": {
@@ -39,5 +42,8 @@
     "cordis.patch.yml",
     "README.md"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
 }

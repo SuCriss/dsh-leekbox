@@ -1,8 +1,10 @@
 # Contributing to LeekBox
 
-Thanks for considering a contribution! LeekBox is intentionally dependency-free:
-the browser bundle is plain React (`createElement`) injected via the DSH module
-loader, and the host half is plain ESM on top of Node's built-in fetch.
+Thanks for considering a contribution! LeekBox keeps runtime dependencies at
+zero: the browser bundle is plain React (`createElement`) injected via the DSH
+module loader, and the host half is plain ESM on top of Node's built-in fetch.
+The only dev-only tool is esbuild, which bundles `src/client/*` into the
+committed `lib/client.js` artifact.
 
 ## Development setup
 
@@ -29,22 +31,36 @@ loader, and the host half is plain ESM on top of Node's built-in fetch.
 
 ## Making changes
 
-- `lib/client.js` (browser) — picked up on a page refresh.
+- Browser code lives in `src/client/` (one file per panel/tab concern). Never
+  hand-edit `lib/client.js` — it is the generated bundle:
+
+  ```sh
+  npm install     # once (dev-only esbuild, pinned by package-lock.json)
+  npm run dev     # watch: rebuild on every save
+  # or
+  npm run build   # one-shot rebuild
+  ```
+
+  Commit the rebuilt `lib/client.js` together with your source changes — CI
+  rebuilds it and fails the PR if the committed artifact is stale. A page
+  refresh picks up the new bundle.
 - `lib/index.js` / `lib/screener.js` (host) — require a DSH restart:
 
   ```sh
   curl -X POST http://127.0.0.1:<gui-port>/dsh-market/restart
   ```
 
-- Keep everything dependency-free. No build step, no bundler.
+- Keep runtime dependencies at zero — esbuild is a dev-only tool; React stays
+  external (injected by the host's module loader) and must never be bundled.
 - Follow the existing tab/region structure and CSS string block.
 - A-share color convention: red = up, green = down.
 
 ## Before opening a PR
 
 ```sh
-node --check lib/index.js && node --check lib/client.js && node --check lib/fetch-utils.js && node --check lib/screener.js
+npm run check   # syntax gate over lib/*, build.mjs and src/client/*
+npm test        # stubbed regression suite (no network)
 ```
 
-CI runs exactly this syntax gate. Data sources used must stay public and free
-endpoints; never commit credentials or personal watchlist data.
+CI runs this syntax gate plus the full test suite. Data sources used must stay
+public and free endpoints; never commit credentials or personal watchlist data.
