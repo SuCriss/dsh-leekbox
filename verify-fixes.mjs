@@ -198,7 +198,7 @@ process.on("exit", () => {
 	const imp = routes.find((r) => r.path === "/api/leekbox/watchlist/import");
 	const drive = async (route, body) => {
 		const res = { code: null, body: null, writeHead(c) { this.code = c; }, end(b) { this.body = b; } };
-		const req = { method: "POST", url: route.path, headers: { host: "127.0.0.1:1" }, socket: { remoteAddress: "127.0.0.1" }, async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(body)); } };
+		const req = { method: "POST", url: route.path, headers: { host: "127.0.0.1:1", "content-type": "application/json", origin: "http://127.0.0.1:1" }, socket: { remoteAddress: "127.0.0.1" }, async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(body)); } };
 		await route.handler(req, res);
 		return { code: res.code, body: res.body ? JSON.parse(res.body) : null };
 	};

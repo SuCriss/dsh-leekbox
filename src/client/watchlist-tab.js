@@ -1,7 +1,7 @@
 // 韭菜盒子 LeekBox — 客户端 bundle 源码：自选页（持仓 + 预警 + 导入导出）
 // 由 build.mjs 打包进 lib/client.js（npm run build）；不要手改产物。
-import { h, useCallback, useEffect, useRef, useState } from "./react.js";
-import { API, api, describeError, fmt, fmtAmount, fmtPct, fmtSign, lkbConfirm, openOnRow, trend, useTradingInterval } from "./core.js";
+import { createRoot, h, useCallback, useEffect, useRef, useState } from "./react.js";
+import { API, api, describeError, fmt, fmtAmount, fmtPct, fmtSign, lkbConfirm, notifyFailure, onToast, openOnRow, pushToast, ToastStack, trend, useTradingInterval } from "./core.js";
 import { StarButton } from "./star.js";
 
 /** Trigger a browser download for an in-memory blob. */
@@ -186,9 +186,14 @@ function AlertForm({ code, name, onDone }) {
 
 /** 预警看护:与行情同一时钟轮询(仅交易时段),触发后 toast + 系统通知 +
  *  蜂鸣,并把该条预警从服务端移除(一次性)。判定在客户端做——服务端只
- *  负责存取,不常驻计时器、不引入推送通道。 */
-export function AlertWatcher({ onToast }) {
+ *  负责存取,不常驻计时器、不引入推送通道。
+ *
+ *  它**必须随插件常驻**（由 entry.js 的 mountAlertWatcher 挂载），不能挂在
+ *  面板里：面板关闭走 root.unmount()，挂在里面的看护会一起卸载，于是"交易
+ *  时段自动盯盘"在面板关掉后静默失效（README 承诺过这个行为）。 */
+export function AlertWatcher({ push }) {
 	const alertsRef = useRef([]);
+	const notify = push ?? pushToast;
 	const load = useCallback(() => {
 		api(API.alerts)
 			.then((d) => {
@@ -229,8 +234,11 @@ export function AlertWatcher({ onToast }) {
 					}
 					if (fired.length === 0) return;
 					for (const { alert, quote } of fired) {
+						// 一次性预警：取消失败就下轮再试（不提示——用户并没有
+						// 主动删它，重复弹一条"删除失败"只会干扰；预警本身已经
+						// 通知过了）。
 						api(API.alerts + "/remove", { method: "POST", body: { id: alert.id } }).catch(() => {});
-						onToast(`🔔 ${alertLabel(alert)} —— ${alert.name}(${alert.code}) 现价 ${fmt(quote.price)} / ${fmtPct(quote.changePct)}`);
+						notify(`🔔 ${alertLabel(alert)} —— ${alert.name}(${alert.code}) 现价 ${fmt(quote.price)} / ${fmtPct(quote.changePct)}`);
 						notifyDesktop(`价格预警：${alert.name}`, `${alertLabel(alert)} · 现价 ${fmt(quote.price)}`);
 					}
 					beep();
@@ -243,6 +251,46 @@ export function AlertWatcher({ onToast }) {
 		[]
 	);
 	return null;
+}
+
+/**
+ * 把预警看护挂成随插件常驻的宿主：自己开一个 detached 容器（不依赖面板的
+ * 挂载点，面板关闭也不影响它），并自带一份 toast 栈——面板没开时就由这里
+ * 把预警弹出来，面板开着时两边都渲染（同一个 toast 流，两份 DOM 不重叠）。
+ *
+ * 返回 `{ dispose }`，由 entry.js 在插件卸载时调用。
+ */
+export function mountAlertWatcher() {
+	let root;
+	let container;
+	let unsubscribe = null;
+	let toasts = [];
+	const render = () => root?.render(h(ToastStack, { toasts, onDismiss: (id) => { toasts = toasts.filter((t) => t.id !== id); render(); } }));
+	container = document.createElement("div");
+	container.dataset.dshLeekboxAlerts = "";
+	container.dataset.dshPlugin = "leekbox";
+	document.body.appendChild(container);
+	root = createRoot(container);
+	// 宿主自己那份 toast 渲染（与面板共用 core 的订阅式提示流）。
+	unsubscribe = onToast((toast) => {
+		toasts = [...toasts.slice(-3), toast];
+		render();
+		setTimeout(() => {
+			toasts = toasts.filter((t) => t.id !== toast.id);
+			render();
+		}, 10000);
+	});
+	root.render(h(AlertWatcher, { push: pushToast }));
+	return {
+		dispose() {
+			unsubscribe?.();
+			unsubscribe = null;
+			root?.unmount();
+			root = void 0;
+			container?.remove();
+			container = void 0;
+		},
+	};
 }
 
 export function WatchlistTab({ onOpen, bump }) {
@@ -296,7 +344,7 @@ export function WatchlistTab({ onOpen, bump }) {
 	const removeAlert = (id) => {
 		api(API.alerts + "/remove", { method: "POST", body: { id } })
 			.then(() => window.dispatchEvent(new Event("leekbox:alerts-changed")))
-			.catch(() => {});
+			.catch(notifyFailure("删除预警"));
 	};
 	const dateStamp = () => {
 		const d = new Date();
@@ -531,7 +579,9 @@ export function WatchlistTab({ onOpen, bump }) {
 											.then(() => {
 												setItems((prev) => prev.map((x) => (x.code === it.code ? { ...x, group: g } : x)));
 											})
-											.catch(() => {});
+											// 分组是用户选的：失败要说，否则下拉框弹回旧值
+											// 却没人解释为什么。
+											.catch(notifyFailure("修改分组"));
 									},
 								},
 								["默认", "短线", "长线", "观察"].map((g) => h("option", { key: g, value: g }, g))

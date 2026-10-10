@@ -1,12 +1,13 @@
 // 韭菜盒子 LeekBox — 客户端 bundle 源码：API 通道 + 格式化 + 通用 hooks
 // 由 build.mjs 打包进 lib/client.js（npm run build）；不要手改产物。
-import { h, useEffect, useRef } from "./react.js";
+import { h, useCallback, useEffect, useRef } from "./react.js";
 
 export const API = {
 	indices: "/api/leekbox/indices",
 	quote: "/api/leekbox/quote",
 	kline: "/api/leekbox/kline",
 	search: "/api/leekbox/search",
+	calendar: "/api/leekbox/calendar",
 	rank: "/api/leekbox/rank",
 	sector: "/api/leekbox/sector",
 	sentiment: "/api/leekbox/sentiment",
@@ -226,45 +227,284 @@ export function useInterval(fn, ms, deps = []) {
 	ref.current = fn;
 	useEffect(() => {
 		if (ms === null) return;
-		const timer = setInterval(() => {
+		// 后台标签页 / 最小化窗口不再空转：拉取型页签回到前台会自动补一次。
+		const run = () => {
+			if (hidden()) return;
 			try {
 				ref.current();
 			} catch {}
-		}, ms);
-		return () => clearInterval(timer);
+		};
+		const timer = setInterval(run, ms);
+		document.addEventListener("visibilitychange", run);
+		return () => {
+			clearInterval(timer);
+			document.removeEventListener("visibilitychange", run);
+		};
 	}, [ms, ...deps]);
 }
+
+//#region 交易时段（服务端交易日历 + 本地时钟）
+
 /**
- * 行情数据专用轮询:只在 A 股连续交易时段(周一~周五 9:30–11:30 / 13:00–15:00)
- * 按周期触发;其余时间上游行情不再变化,挂载时的首次拉取即为终值,不再重复请求。
- * 定时器保持空转但不发请求,以便跨开盘边界使用时(如 09:15 打开面板)在 09:30 自动进入轮询。
+ * 服务端 `/api/leekbox/calendar` 下发的日级信息。
+ *
+ * 交易日只能从上游真实日 K 推导（节假日没有 K 线），本地算不出来，所以这里
+ * 存服务端给的 `tradingDays`；拿不到时 `tradingDay: null` 表示"未知"，此时
+ * 退回"周一~周五"的启发式，绝不假装知道。
+ */
+let tradingCalendar = { tradingDays: null, lastTradingDay: "", nextTradingDay: "", ready: false };
+let lastCalendarAt = 0;
+const sessionListeners = new Set();
+/** 拿到真日历后的刷新间隔；没拿到则按 20s 节流重试（服务端首次构建是后台跑的）。 */
+const CALENDAR_TTL_MS = 30 * 60 * 1000;
+const CALENDAR_RETRY_MS = 20 * 1000;
+
+/** 本地时钟的东八区墙上时间（用户在 UTC 机器上时，"现在几点"仍按北京时间算）。 */
+function cnParts(now = new Date()) {
+	const shifted = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+	return {
+		weekday: shifted.getUTCDay(),
+		minutes: shifted.getUTCHours() * 60 + shifted.getUTCMinutes(),
+	};
+}
+function cnToday(now = new Date()) {
+	const shifted = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+	const p = (n) => String(n).padStart(2, "0");
+	return `${shifted.getUTCFullYear()}-${p(shifted.getUTCMonth() + 1)}-${p(shifted.getUTCDate())}`;
+}
+const hidden = () => typeof document !== "undefined" && document.visibilityState === "hidden";
+
+/** 当前交易时段。标签与 core.js 的服务端 calendar.js 保持同一套口径。 */
+export function marketSession(now = new Date()) {
+	const { weekday, minutes } = cnParts(now);
+	const calendarSaysTrading = tradingCalendar.tradingDays === null ? null : tradingCalendar.tradingDays.includes(cnToday(now));
+	return classifySession(weekday, minutes, calendarSaysTrading);
+}
+
+/**
+ * 时段判定的**纯函数**部分（不读模块状态），与服务端 `lib/calendar.js` 的
+ * `sessionState()` 是同一套口径。抽出来是为了能被逐点对照测试——客户端与服务端
+ * 分处两个 bundle，口径漂移了没人会发现（这正是 P0#2 那类 bug 的成因）。
+ *
+ * @param {number} weekday 0=周日
+ * @param {number} minutes 东八区墙上时间的当天分钟数
+ * @param {boolean|null} tradingDay null = 未知（无日历 → 退回"周一~周五"）
+ */
+export function classifySession(weekday, minutes, tradingDay = null) {
+	const isTradingDay = tradingDay === null ? weekday >= 1 && weekday <= 5 : tradingDay;
+	let session;
+	if (!isTradingDay) {
+		session = tradingDay === null && (weekday === 0 || weekday === 6) ? "weekend" : "holiday";
+	} else if (minutes >= 9 * 60 + 15 && minutes < 9 * 60 + 25) session = "auction";
+	else if (minutes < 9 * 60 + 30) session = "preOpen";
+	else if (minutes < 11 * 60 + 30) session = "open";
+	else if (minutes < 13 * 60) session = "lunch";
+	else if (minutes < 15 * 60) session = "open";
+	else session = "closed";
+	const label = { preOpen: "盘前", auction: "集合竞价", open: "交易中", lunch: "午间休市", closed: "已收盘", holiday: "休市" }[session];
+	return { session, label, open: isTradingDay && session === "open", tradingDay: isTradingDay, calendarReady: tradingDay !== null };
+}
+
+/** 兼容旧调用点：只关心"交易中 / 已收盘 / 休市"三态的地方继续可用。 */
+export function marketOpenLabel(now = new Date()) {
+	const s = marketSession(now);
+	return { open: s.open, label: s.label, session: s.session, calendarReady: s.calendarReady };
+}
+
+/** 是否应该轮询：交易时段内 + 页面可见。 */
+export function shouldPoll() {
+	if (hidden()) return false;
+	if (!marketSession().open) return false;
+	return true;
+}
+
+function notifySession() {
+	sessionListeners.forEach((fn) => {
+		try {
+			fn(false);
+		} catch {}
+	});
+}
+
+/** 提醒所有订阅者"面板重新可见了"，让它们立刻补一次数据。 */
+function markVisible() {
+	if (hidden()) return;
+	sessionListeners.forEach((fn) => {
+		try {
+			fn(true);
+		} catch {}
+	});
+}
+
+/**
+ * 拉一次服务端交易日历。失败保持原状态（可能是启发式），下次再试。
+ *
+ * 拿到真日历后 30 分钟才刷（交易日列表一天只变一次，时段判定用本地时钟）；
+ * 没拿到时按 20s 节流重试，因为服务端首次构建是后台跑的，头两次可能还是兜底。
+ * @param {boolean} force 忽略节流强制刷新（回到前台 / 显式刷新时用）
+ */
+export function refreshCalendar(force = false) {
+	const now = Date.now();
+	const wait = tradingCalendar.ready ? CALENDAR_TTL_MS : CALENDAR_RETRY_MS;
+	if (!force && now - lastCalendarAt < wait) return Promise.resolve();
+	lastCalendarAt = now;
+	return api(API.calendar)
+		.then((d) => {
+			const days = Array.isArray(d?.tradingDays) ? d.tradingDays : null;
+			tradingCalendar = {
+				tradingDays: days !== null && days.length > 0 ? days : null,
+				lastTradingDay: d?.lastTradingDay ?? "",
+				nextTradingDay: d?.nextTradingDay ?? "",
+				ready: days !== null && days.length > 0,
+			};
+			notifySession();
+		})
+		.catch(() => {});
+}
+
+/** 面板挂载时调一次：拉日历 + 订阅"回到前台补拉"。 */
+export function startSessionClock() {
+	if (typeof document === "undefined") return () => {};
+	const onVisible = () => {
+		if (!hidden()) markVisible();
+	};
+	document.addEventListener("visibilitychange", onVisible);
+	document.addEventListener("focus", onVisible);
+	refreshCalendar(true);
+	// 兜底重试：真日历没拿到就每分钟再试（refreshCalendar 内部另有 20s 节流）；
+	// 拿到后只在 30 分钟节流到期时才真的发请求。
+	const poll = setInterval(() => refreshCalendar(false), 60 * 1000);
+	return () => {
+		document.removeEventListener("visibilitychange", onVisible);
+		document.removeEventListener("focus", onVisible);
+		clearInterval(poll);
+		sessionListeners.clear();
+	};
+}
+
+/**
+ * 组件订阅"时段变化 / 回到前台"。
+ * @param {(visible: boolean) => void} fn 回到前台时以 visible=true 调用
+ */
+export function useSessionClock(fn) {
+	const ref = useRef(fn);
+	ref.current = fn;
+	useEffect(() => {
+		const wrapped = (visible) => ref.current(visible === true);
+		sessionListeners.add(wrapped);
+		return () => sessionListeners.delete(wrapped);
+	}, []);
+}
+
+/**
+ * 行情数据专用轮询：只在 A 股连续交易时段（交易日 9:30–11:30 / 13:00–15:00，
+ * 交易日历来自服务端真实日 K）按周期触发；其余时间上游行情不再变化，挂载时
+ * 的首次拉取即为终值。定时器保持空转但不发请求，以便跨开盘边界使用时自动进入
+ * 轮询；页面不可见时同样不发，回到前台立刻补一次。
+ *
+ * 这里有两条独立但一致的判据：**是否交易日**（服务端日历，节假日这条最关键）
+ * 和**是否在盘中**（本地时钟，东八区）。旧实现只有"周一~周五"，国庆/春节期间
+ * 会显示"交易中"并整天重复打上游。
  */
 export function useTradingInterval(fn, ms, deps = []) {
 	const ref = useRef(fn);
 	ref.current = fn;
+	const refresh = useCallback(() => {
+		try {
+			ref.current();
+		} catch {}
+	}, []);
+	const onVisible = useCallback(
+		(visible) => {
+			if (visible && marketSession().open) refresh();
+		},
+		[refresh]
+	);
+	useSessionClock(onVisible);
 	useEffect(() => {
 		if (ms === null) return;
-		const timer = setInterval(() => {
-			if (!marketOpenLabel().open) return;
-			try {
-				ref.current();
-			} catch {}
-		}, ms);
-		return () => clearInterval(timer);
-	}, [ms, ...deps]);
+		const run = () => {
+			if (!shouldPoll()) return;
+			refresh();
+		};
+		const timer = setInterval(run, ms);
+		document.addEventListener("visibilitychange", run);
+		return () => {
+			clearInterval(timer);
+			document.removeEventListener("visibilitychange", run);
+		};
+	}, [ms, refresh, ...deps]);
 }
-export function marketOpenLabel() {
-	const now = new Date();
-	const day = now.getDay();
-	const minutes = now.getHours() * 60 + now.getMinutes();
-	const trading =
-		day >= 1 &&
-		day <= 5 &&
-		((minutes >= 9 * 60 + 30 && minutes <= 11 * 60 + 30) || (minutes >= 13 * 60 && minutes <= 15 * 60));
-	return { open: trading, label: trading ? "交易中" : day >= 1 && day <= 5 ? "已收盘" : "休市" };
-}
+
+//#endregion
+
 export function nowTime() {
 	const d = new Date();
 	const p = (x) => String(x).padStart(2, "0");
 	return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
+
+//#region 常驻提示条（toast）
+//
+// 预警要能在**面板关闭时**弹出来，所以 toast 不能只属于面板组件。这里做一份
+// 进程内的订阅式实现：谁在渲染谁订阅，没有订阅者（面板没开）就由常驻的预警
+// 宿主自己渲染一份。文案与样式沿用面板里那套 `.lkb-toasts` / `.lkb-toast`。
+
+const toastListeners = new Set();
+let toastSeq = 0;
+/** 触发一条提示；返回它的 id。 */
+export function pushToast(message) {
+	toastSeq += 1;
+	const toast = { id: `t${toastSeq}`, msg: message };
+	for (const fn of toastListeners) {
+		try {
+			fn(toast);
+		} catch {}
+	}
+	return toast.id;
+}
+/** 订阅提示条；返回退订函数。 */
+export function onToast(fn) {
+	toastListeners.add(fn);
+	return () => toastListeners.delete(fn);
+}
+
+/**
+ * 把一次"用户明确点击触发的写操作"的失败摊开给用户看。
+ *
+ * 用法：`api(...).catch(notifyFailure("加入自选"))`。
+ *
+ * 背景：全仓有十几处 `.catch(() => {})`，其中不少盖的是用户**主动点击**的操作
+ * （★ 加自选、改分组、删预警）。失败后界面什么都不说：图标不变、列表不变、
+ * 用户以为成功了 —— 下次刷新才发现没生效，而且不知道是网络问题还是没权限。
+ * 这里统一走与价格预警同一条 toast 通道，文案复用 describeError 的中文口径。
+ *
+ * 只用于用户可见、用户发起的操作。后台轮询、预热、可选增强信息（F10/资金流
+ * 的首次拉取）失败可以继续保持安静，不要拿这个包一切。
+ *
+ * @param {string} what 动作名，如 "加入自选"；会拼成 "加入自选失败：..."
+ * @param {(msg: string) => void} [sink] 自定义出口（默认 pushToast）
+ */
+export function notifyFailure(what, sink = pushToast) {
+	return (error) => {
+		const reason = describeError(error);
+		try {
+			sink(`${what}失败：${reason}`);
+		} catch {}
+		return void 0;
+	};
+}
+
+/** 渲染提示条列表（面板与常驻宿主共用这一份 DOM 结构）。 */
+export function ToastStack({ toasts, onDismiss }) {
+	if (toasts.length === 0) return null;
+	return h(
+		"div",
+		{ className: "lkb-toasts", role: "status", "aria-live": "polite" },
+		toasts.map((t) =>
+			h("div", { key: t.id, className: "lkb-toast", title: "点击关闭", onClick: () => onDismiss(t.id) }, t.msg)
+		)
+	);
+}
+
+//#endregion

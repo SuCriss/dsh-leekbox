@@ -165,7 +165,7 @@ console.log("\n— 端到端：/api/leekbox/* 上游全挂 —");
 		const req = {
 			method,
 			url,
-			headers: { host: "127.0.0.1:1" },
+			headers: { host: "127.0.0.1:1", "content-type": "application/json", origin: "http://127.0.0.1:1" },
 			socket: { remoteAddress: "127.0.0.1" },
 			async *[Symbol.asyncIterator]() {
 				if (body !== undefined) yield Buffer.from(JSON.stringify(body));

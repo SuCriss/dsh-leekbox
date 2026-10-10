@@ -1,7 +1,7 @@
 // 韭菜盒子 LeekBox — 客户端 bundle 源码：自选星标按钮
 // 由 build.mjs 打包进 lib/client.js（npm run build）；不要手改产物。
 import { h } from "./react.js";
-import { API, api, lkbConfirm } from "./core.js";
+import { API, api, lkbConfirm, notifyFailure } from "./core.js";
 
 export function StarButton({ code, name, on, confirmText }) {
 	return h(
@@ -22,7 +22,9 @@ export function StarButton({ code, name, on, confirmText }) {
 							window.dispatchEvent(new Event("leekbox:watchlist-changed"));
 						});
 					})
-					.catch(() => {});
+					// 星标是用户直接点的：失败必须说话，否则图标纹丝不动，
+					// 用户以为已经加进去了。
+					.catch(notifyFailure(on ? "移出自选" : "加入自选"));
 			},
 		},
 		on ? "★" : "☆"

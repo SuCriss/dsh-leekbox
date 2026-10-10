@@ -94,7 +94,7 @@ check("未知 key 不进分组", buildScreenMeta({ signals: [{ key: "macdGold", 
 	const post = async (body) => {
 		const res = { code: null, body: null, writeHead(c) { this.code = c; }, end(b) { this.body = b; } };
 		const req = {
-			method: "POST", url: "/api/leekbox/screener", headers: { host: "127.0.0.1:1" },
+			method: "POST", url: "/api/leekbox/screener", headers: { host: "127.0.0.1:1", "content-type": "application/json", origin: "http://127.0.0.1:1" },
 			socket: { remoteAddress: "127.0.0.1" },
 			async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(body)); },
 		};

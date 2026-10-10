@@ -26,6 +26,8 @@ jobs:
           node --check lib/client.js
           node --check lib/fetch-utils.js
           node --check lib/emrank.js
+          node --check lib/calendar.js
+          node --check lib/route-cache.js
           node --check lib/screener.js
           node --check lib/screener-validate.js
           node --check lib/screener-cache.js

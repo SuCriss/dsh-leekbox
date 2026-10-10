@@ -1,96 +1,71 @@
-// 韭菜盒子 LeekBox — 客户端 bundle 源码：主面板（标签页 + 弹窗管理 + 拖拽）
+// 韭菜盒子 LeekBox — 客户端 bundle 源码：主面板（标签页 + 弹窗管理 + 拖拽 + 预警 toast）
 // 由 build.mjs 打包进 lib/client.js（npm run build）；不要手改产物。
 import { createRoot, h, useCallback, useEffect, useRef, useState } from "./react.js";
-import { API, api, closeConfirm, ConfirmDialog, confirmListeners, marketOpenLabel, normCode } from "./core.js";
+import { API, api, closeConfirm, ConfirmDialog, confirmListeners, marketOpenLabel, normCode, onToast, ToastStack } from "./core.js";
 import { IndicesTab } from "./indices-tab.js";
 import { MarketTab } from "./market-tab.js";
-import { AlertWatcher, WatchlistTab } from "./watchlist-tab.js";
+import { WatchlistTab } from "./watchlist-tab.js";
 import { ScreenerTab } from "./screener-tab.js";
 import { NewsTab } from "./news-tab.js";
 import { StockDetailWindow } from "./detail.js";
 
 const TABS = [
-	{ key: "indices", label: "📊 大盘" },
-	{ key: "market", label: "💹 行情" },
-	{ key: "watchlist", label: "⭐ 自选" },
-	{ key: "screener", label: "🔍 选股" },
-	{ key: "news", label: "📰 快讯" },
+	{ key: "indices", label: "大盘" },
+	{ key: "market", label: "行情" },
+	{ key: "watchlist", label: "自选" },
+	{ key: "screener", label: "选股" },
+	{ key: "news", label: "快讯" },
 ];
 
-function LeekBoxPanel({ onClose }) {
+/** 关"当前置顶"的那扇窗 —— 不是"最后打开"的那扇。
+ *
+ * wins 数组是插入顺序，而每扇窗的 z 由 focusWin/openStock 递增分配；用户点过
+ * 别的窗口后，数组末位就不再是视觉上在最前面的那个。以前用 slice(0,-1) 关的
+ * 是数组末位，于是 ESC/点遮罩会关掉一扇被压在下面的窗，而"看起来在最上面"
+ * 的那扇纹丝不动。
+ *
+ * 放在模块作用域：它是纯函数，且要作为 useEffect 依赖 —— 每次渲染新建一个
+ * 函数会让 ESC 的监听器每渲染重挂一次。导出以便逐场景对照测试。
+ */
+export function topWindow(list) {
+	let top = null;
+	for (const w of list) if (top === null || (w.z ?? 0) >= (top.z ?? 0)) top = w;
+	return top;
+}
+
+export function LeekBoxPanel({ onClose }) {
 	const [tab, setTab] = useState("indices");
-	const [wins, setWins] = useState([]); // open stock-detail popups: {id, code, name, x, y, z}
+	const [wins, setWins] = useState([]);
+	const [watchCodes, setWatchCodes] = useState([]);
+	const [watchBump, setWatchBump] = useState(0);
+	const [pos, setPos] = useState(null);
+	const cardRef = useRef(null);
+	const zSeq = useRef(10);
 	const winsRef = useRef([]);
 	winsRef.current = wins;
-	const zSeq = useRef(10100);
-	const [watchBump, setWatchBump] = useState(0);
-	const [watchCodes, setWatchCodes] = useState([]);
-	const [pos, setPos] = useState(() => {
-		try {
-			const raw = localStorage.getItem("leekbox.panel.pos");
-			if (raw !== null) {
-				const p = JSON.parse(raw);
-				if (typeof p.x === "number" && typeof p.y === "number") return p;
-			}
-		} catch {}
-		return null;
-	});
-	const cardRef = useRef(null);
-	const savePos = (p) => {
-		try {
-			localStorage.setItem("leekbox.panel.pos", JSON.stringify(p));
-		} catch {}
-	};
-	// Center on first open when no saved position exists.
-	useEffect(() => {
-		if (pos === null && cardRef.current !== null) {
-			const rect = cardRef.current.getBoundingClientRect();
-			setPos({
-				x: Math.max(8, Math.round((window.innerWidth - rect.width) / 2)),
-				y: Math.max(8, Math.round((window.innerHeight - rect.height) / 2)),
-			});
-		}
-	}, [pos]);
-	// Drag the window by its header.
 	const onHeadPointerDown = (e) => {
 		if (e.button !== 0) return;
 		if (e.target.closest("button") !== null) return; // let buttons work normally
 		e.preventDefault();
-		const startX = e.clientX;
-		const startY = e.clientY;
 		const rect = cardRef.current !== null ? cardRef.current.getBoundingClientRect() : null;
 		if (rect === null) return;
+		const startX = e.clientX;
+		const startY = e.clientY;
 		const baseLeft = rect.left;
 		const baseTop = rect.top;
-		const clampX = (x) => Math.max(8 - rect.width + 60, Math.min(x, window.innerWidth - 60));
-		const clampY = (y) => Math.max(8, Math.min(y, window.innerHeight - 40));
-		const onMove = (ev) => {
-			const p = { x: clampX(baseLeft + ev.clientX - startX), y: clampY(baseTop + ev.clientY - startY) };
-			setPos(p);
-		};
+		const clampX = (v) => Math.max(8 - rect.width + 80, Math.min(v, window.innerWidth - 80));
+		const clampY = (v) => Math.max(8, Math.min(v, window.innerHeight - 40));
+		const onMove = (ev) => setPos({ x: clampX(baseLeft + ev.clientX - startX), y: clampY(baseTop + ev.clientY - startY) });
 		const onUp = () => {
 			window.removeEventListener("pointermove", onMove);
 			window.removeEventListener("pointerup", onUp);
 			document.body.style.userSelect = "";
-			if (cardRef.current !== null) {
-				const r = cardRef.current.getBoundingClientRect();
-				savePos({ x: r.left, y: r.top });
-			}
 		};
 		document.body.style.userSelect = "none";
 		window.addEventListener("pointermove", onMove);
 		window.addEventListener("pointerup", onUp);
 	};
-	const resetPos = () => {
-		const rect = cardRef.current !== null ? cardRef.current.getBoundingClientRect() : null;
-		if (rect === null) return;
-		const p = {
-			x: Math.max(8, Math.round((window.innerWidth - rect.width) / 2)),
-			y: Math.max(8, Math.round((window.innerHeight - rect.height) / 2)),
-		};
-		setPos(p);
-		savePos(p);
-	};
+	const resetPos = () => setPos(null);
 	const openStock = useCallback((rawCode, rawName) => {
 		const code = normCode(rawCode ?? "");
 		if (!/^(sh|sz|bj)\d{6}$/.test(code)) return;
@@ -126,37 +101,51 @@ function LeekBoxPanel({ onClose }) {
 			return prev.map((w) => (w.id === id ? { ...w, z: zz } : w));
 		});
 	const closeWin = (id) => setWins((prev) => prev.filter((w) => w.id !== id));
-	const closeTopWin = () => setWins((prev) => prev.slice(0, -1));
+	const closeTopWin = () => setWins((prev) => {
+		const top = topWindow(prev);
+		return top === null ? prev : prev.filter((w) => w.id !== top.id);
+	});
 	const bumpWatch = () => setWatchBump((v) => v + 1);
 	// In-panel confirm dialog host (replaces native window.confirm).
 	const [confirmReq, setConfirmReq] = useState(null);
-	// 预警 toast:AlertWatcher 触发时经 pushToast 弹出,10s 自动消失,可点击关闭。
+	// 预警 toast：AlertWatcher 常驻在 entry.js（随插件而不是随面板存活），
+	// 触发时经 core 的 pushToast 广播过来，面板只负责渲染。
 	const [toasts, setToasts] = useState([]);
-	const pushToast = useCallback((msg) => {
-		const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-		setToasts((prev) => [...prev.slice(-3), { id, msg }]);
-		setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 10000);
+	const dismissToast = useCallback((id) => {
+		setToasts((prev) => prev.filter((t) => t.id !== id));
 	}, []);
 	useEffect(() => {
-		const listener = (req) => setConfirmReq(req);
-		confirmListeners.add(listener);
+		return onToast((toast) => {
+			setToasts((prev) => [...prev.slice(-3), toast]);
+			setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== toast.id)), 10000);
+		});
+	}, []);
+	useEffect(() => {
+		const fn = (req) => setConfirmReq(req);
+		confirmListeners.add(fn);
+		return () => confirmListeners.delete(fn);
+	}, []);
+	useEffect(() => {
 		return () => {
-			confirmListeners.delete(listener);
-			// The panel is unmounting (✕ / overlay click with the dialog
-			// open): resolve the pending confirm, otherwise the module-level
-			// confirmState stays set and every later lkbConfirm silently
-			// resolves false — stars stop working until the page reloads.
+			// Unmounting with a pending confirm would otherwise leave the
+			// promise forever unresolved: the panel is gone, so nothing can
+			// call closeConfirm, confirmState stays set and every later
+			// lkbConfirm silently resolves false — stars stop working until
+			// the page reloads.
 			closeConfirm(false);
 		};
 	}, []);
-	// ESC closes the top-most detail popup first, then the panel itself.
+	// ESC 关当前置顶的那扇详情窗（按 z 最大，不是数组末位），都关完了才关面板。
 	useEffect(() => {
 		const onKey = (e) => {
 			if (e.key !== "Escape") return;
 			const t = e.target;
 			if (t !== null && t !== void 0 && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-			if (winsRef.current.length > 0) setWins((prev) => prev.slice(0, -1));
-			else onClose();
+			if (winsRef.current.length > 0) {
+				const top = topWindow(winsRef.current);
+				if (top === null) return;
+				setWins((prev) => prev.filter((w) => w.id !== top.id));
+			} else onClose();
 		};
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
@@ -221,7 +210,7 @@ function LeekBoxPanel({ onClose }) {
 			),
 			h(
 				"div",
-				{ className: "lkb_tabs" },
+				{ className: "lkb_tabBar" },
 				TABS.map((t) => h("button", { key: t.key, className: "lkb_tab", "data-active": tab === t.key ? "true" : "false", onClick: () => setTab(t.key) }, t.label))
 			),
 			h("div", { className: "lkb_body" }, body),
@@ -237,7 +226,7 @@ function LeekBoxPanel({ onClose }) {
 				key: w.id,
 				code: w.code,
 				name: w.name,
-				isIndex: w.isIndex === true,
+				isIndex: w.isIndex,
 				x: w.x,
 				y: w.y,
 				z: w.z,
@@ -247,16 +236,7 @@ function LeekBoxPanel({ onClose }) {
 			})
 		),
 		confirmReq === null ? null : h(ConfirmDialog, { text: confirmReq.text }),
-		h(AlertWatcher, { onToast: pushToast }),
-		toasts.length > 0
-			? h(
-				"div",
-				{ className: "lkb-toasts" },
-				toasts.map((t) =>
-					h("div", { key: t.id, className: "lkb-toast", title: "点击关闭", onClick: () => setToasts((prev) => prev.filter((x) => x.id !== t.id)) }, t.msg)
-				)
-			)
-			: null
+		h(ToastStack, { toasts, onDismiss: dismissToast })
 	);
 }
 

@@ -4,6 +4,16 @@ import { h, useCallback, useEffect, useRef, useState } from "./react.js";
 import { API, api, cnMarket, describeError, fmt, fmtAmount, fmtPct, fmtSign, fmtYi, isWatched, openOnRow, trend, useTradingInterval } from "./core.js";
 import { StarButton } from "./star.js";
 
+/** 本机时区的今天（YYYY-MM-DD）。
+ *
+ * 用作日期选择框的 max：不能用 toISOString()，它按 UTC 取日期 —— 北京时间
+ * 早上 8 点前 UTC 还停在前一天，会让"今天"这个选项消失。
+ */
+export function todayDateStr(now = new Date()) {
+	const p = (v) => String(v).padStart(2, "0");
+	return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
 const RANK_CHOICES = [
 	{ key: "changepercent", label: "涨幅榜", order: "desc" },
 	{ key: "changepercent", label: "跌幅榜", order: "asc" },
@@ -16,8 +26,7 @@ const BOARD_MODES = [
 	{ key: "sector", label: "🗂 板块榜" },
 	{ key: "longhu", label: "🐉 龙虎榜" },
 ];
-const POOL_CHOICES = [
-	{ key: "hs_a", label: "沪深A股" },
+const POOL_CHOICES = [	{ key: "hs_a", label: "沪深A股" },
 	{ key: "main", label: "主板" },
 	{ key: "non_main", label: "非主板" },
 	{ key: "etf", label: "ETF/场内基金" },
@@ -138,11 +147,19 @@ export function MarketTab({ onOpen, watchCodes }) {
 	const [lhRows, setLhRows] = useState([]);
 	const [lhTotal, setLhTotal] = useState(0);
 	const [lhDate, setLhDate] = useState("");
+	// 用户显式选择的查询日期（""=最近已发布的交易日）。服务端会把还没出榜的
+	// 日期往前回溯，所以 lhDate 是"实际显示的那天"，可能与 lhQuery 不同。
+	const [lhQuery, setLhQuery] = useState("");
 	const [lhLoading, setLhLoading] = useState(false);
 	const [sentiment, setSentiment] = useState(null);
 	const debounceRef = useRef(null);
 	const searchSeq = useRef(0);
-	const loadSeq = useRef(0);
+	// 榜单 / 板块 / 龙虎榜各有独立的请求序号。此前三个 loader 共用一个 loadSeq，
+	// 于是 60s 轮询里的 loadRank() 会把在飞的板块请求判成过期，`.finally` 里的
+	// setSectorLoading(false) 被跳过 —— 表格永久停在"板块数据加载中…"。
+	const rankSeq = useRef(0);
+	const sectorSeq = useRef(0);
+	const longhuSeq = useRef(0);
 	const watchSet = new Set(watchCodes ?? []);
 	useEffect(() => {
 		clearTimeout(debounceRef.current);
@@ -176,22 +193,22 @@ export function MarketTab({ onOpen, watchCodes }) {
 		return () => clearTimeout(debounceRef.current);
 	}, [kw]);
 	const loadRank = useCallback(() => {
-		const seq = ++loadSeq.current;
+		const seq = ++rankSeq.current;
 		const choice = RANK_CHOICES[rankKey];
 		setLoading(true);
 		api(API.rank + `?sort=${choice.key}&order=${choice.order}&page=${page}&size=${pageSize}&node=${pool}`)
 			.then((data) => {
-				if (seq !== loadSeq.current) return; // stale response
+				if (seq !== rankSeq.current) return; // stale response
 				setRows(data.rows ?? []);
 				setTotal(data.total ?? 0);
 				setError("");
 			})
 			.catch((e) => {
-				if (seq !== loadSeq.current) return;
+				if (seq !== rankSeq.current) return;
 				setError(describeError(e));
 			})
 			.finally(() => {
-				if (seq !== loadSeq.current) return;
+				if (seq !== rankSeq.current) return;
 				setLoading(false);
 			});
 	}, [rankKey, page, pageSize, pool]);
@@ -199,20 +216,20 @@ export function MarketTab({ onOpen, watchCodes }) {
 		loadRank();
 	}, [loadRank]);
 	const loadSector = useCallback(() => {
-		const seq = ++loadSeq.current;
+		const seq = ++sectorSeq.current;
 		setSectorLoading(true);
 		api(API.sector + `?type=${sectorType}&sort=${sectorSort}&order=desc&page=${sectorPage}&size=${sectorPageSize}`)
 			.then((data) => {
-				if (seq !== loadSeq.current) return; // stale response
+				if (seq !== sectorSeq.current) return; // stale response
 				setSectorRows(data.rows ?? []);
 				setSectorTotal(data.total ?? 0);
 			})
 			.catch((e) => {
-				if (seq !== loadSeq.current) return;
+				if (seq !== sectorSeq.current) return;
 				setError(describeError(e));
 			})
 			.finally(() => {
-				if (seq !== loadSeq.current) return;
+				if (seq !== sectorSeq.current) return;
 				setSectorLoading(false);
 			});
 	}, [sectorType, sectorSort, sectorPage, sectorPageSize]);
@@ -220,24 +237,28 @@ export function MarketTab({ onOpen, watchCodes }) {
 		if (mode === "sector") loadSector();
 	}, [mode, loadSector]);
 	const loadLonghu = useCallback(() => {
-		const seq = ++loadSeq.current;
+		const seq = ++longhuSeq.current;
 		setLhLoading(true);
-		api(API.longhu + `?date=&page=1&size=30`)
+		api(API.longhu + `?date=${encodeURIComponent(lhQuery)}&page=1&size=30`)
 			.then((data) => {
-				if (seq !== loadSeq.current) return; // stale response
+				if (seq !== longhuSeq.current) return; // stale response
 				setLhRows(data.rows ?? []);
 				setLhTotal(data.total ?? 0);
 				setLhDate(data.date ?? "");
 			})
 			.catch((e) => {
-				if (seq !== loadSeq.current) return;
+				if (seq !== longhuSeq.current) return;
 				setError(describeError(e));
+				// 请求失败时不要把上一次的日期/行留在屏幕上冒充这一次的结果
+				setLhRows([]);
+				setLhTotal(0);
+				setLhDate("");
 			})
 			.finally(() => {
-				if (seq !== loadSeq.current) return;
+				if (seq !== longhuSeq.current) return;
 				setLhLoading(false);
 			});
-	}, []);
+	}, [lhQuery]);
 	useEffect(() => {
 		if (mode === "longhu") loadLonghu();
 	}, [mode, loadLonghu]);
@@ -263,8 +284,13 @@ export function MarketTab({ onOpen, watchCodes }) {
 		} catch {}
 		loadSentiment();
 	}, [loadSentiment]);
+	// 60s 自动刷新只刷当前页签看得到的那个域：以前无条件调 loadRank()，在板块 /
+	// 龙虎榜页签下等于每 60s 白打一次被东财限流的 clist，还会把在飞的板块请求判成
+	// 过期（见 loadSector 的 stale 守卫）。
 	useTradingInterval(() => {
-		loadRank();
+		if (mode === "sector") loadSector();
+		else if (mode === "longhu") loadLonghu();
+		else loadRank();
 		loadSentiment();
 	}, 60000);
 	return h(
@@ -389,12 +415,36 @@ export function MarketTab({ onOpen, watchCodes }) {
 						h("button", { className: "lkb-chip", "data-active": sectorSort === "f62" ? "true" : "false", onClick: () => { setSectorSort("f62"); setSectorPage(1); } }, "主力净流入")
 					)
 				: null,
+		mode === "longhu"
+			? h(
+					"div",
+					{ className: "lkb-chipRow" },
+					h("span", { className: "lkb-chipLabel" }, "查日期"),
+					h("input", {
+						type: "date",
+						className: "lkb-input",
+						style: { width: 138, padding: "3px 6px", fontSize: 11 },
+						value: lhQuery,
+						max: todayDateStr(),
+						title: "选择要查看的龙虎榜日期（留空 = 最近已发布）",
+						onChange: (e) => setLhQuery(e.target.value),
+					}),
+					lhQuery === ""
+						? null
+						: h("button", { className: "lkb-chip", onClick: () => setLhQuery("") }, "回到最近"),
+					lhDate === "" ? null : h("span", { className: "lkb-chipLabel", style: { marginLeft: 4 } }, `显示 ${lhDate}`)
+				)
+			: null,
 		mode === "longhu" && lhDate !== ""
 			? h(
 					"div",
 					{ className: "lkb-banner" },
 					"📅 龙虎榜数据日期 ",
 					h("b", null, lhDate),
+					// 请求的那天可能还没出榜（要盘后晚间才发布），服务端会往前找最近的
+					// 已发布交易日 —— 这时必须说明"你要的那天没有，下面是 X 日"，否则
+					// 用户会以为这就是他要的那天。
+					lhQuery !== "" && lhQuery !== lhDate ? `（${lhQuery} 尚未发布，已回溯到最近交易日）` : "",
 					" · 上榜 ",
 					h("b", null, lhTotal),
 					" 只（收盘后晚间更新）"

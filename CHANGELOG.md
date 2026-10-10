@@ -3,6 +3,67 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.0] - 2026-10-10
+
+第二批"静默失败"专项：六个缺陷的共同点是**不抛异常、不报错**——只是悄悄给出错误的结果，或者悄悄什么都不做。所以修复的重点不是"让它能跑"，而是"让它出错时说得出来"。
+
+### Fixed
+
+- **`/longhu?date=` 参数被完全忽略**（最严重）：路由从不读 `date`，永远拿"今天"去打上游。于是接口文档承诺的"查历史某天龙虎榜"根本不存在，而且盘中和周末请求会拿到空榜单——因为当天的榜要等收盘后晚间才发布。现在 `date` 是**回溯起点**：`fetchEmLonghu` 从该日起往前找最近有榜的交易日（遇到周末跳过，因为周末不可能有榜），响应回带 `requestedDate` 与实际的 `date`。解析用新增的 `parseDateOnly()`，它拒绝 `2026-02-30`、`2026-13-01` 这类会被 `Date` 静默进位的假日期，非法输入直接 400 而不是悄悄换成今天——"静默返回另一天的数据"正是这一批要消灭的缺陷类型。
+- **回溯改成"只往过去"**：起点之后即使有数据也不取用。往前找会把未来日期的榜单当成用户请求的那天，语义上更糟。同时加了 15s 总预算（`budgetMs`）：此前最坏情况是 8 天 × 2 轮 × 2 个 host × 8s 超时，可以拖到几分钟。
+- **资金流柱状图的悬停是死代码**：`FflowChart` 只有容器的 `onMouseLeave`，没有任何 setter 写过 `hover`，于是高亮下标 `hi` 恒为 `-1`——变暗、高亮、当日净流入读数**全部**永远不生效。现在每根柱子有 `onMouseEnter`，下标做 clamp，并在未悬停时给一句占位提示（而不是让读数行整块消失导致布局跳动）。
+- **快讯 60 秒自动刷新会静默丢掉翻出来的页**：轮询恒取第 1 页并**替换**整个列表，但页码仍停在 3——于是"加载更多"从第 4 页继续，第 2、3 页永久缺失且用户毫无察觉。现在按已翻到的页号用 `loadThrough()` 重新取满（跨页去重，因为上游每次请求都会重新合并、页与页之间会漂移），并在切源时重置。
+- **ESC / 点遮罩关错窗口**：`closeTopWin` 用 `slice(0, -1)` 关**数组末位**，而 `wins` 是插入顺序、`z` 由 `focusWin` 递增分配——用户点过别的窗口后，末位就不再是视觉上最上面的那个，于是关掉的是被压在底下的窗。现在按 `z` 最大值取（`topWindow()`，纯函数、模块作用域、可测试），ESC 与遮罩两个入口都走它。
+- **用户主动点击的写操作失败时一声不吭**：星标、加/移自选、改分组、删预警失败后图标纹丝不动，用户以为已经生效。新增 `notifyFailure(what)`（走与价格预警同一条 toast 通道），接到这些入口上。**范围是刻意的**：后台轮询、预热、以及 F10/资金流这类可选增强的首次加载仍然保持安静——那些失败不该骚扰用户。
+- **F10 / 资金流失败后整块消失**：现在保留标题、显示原因，并给一个"重试"按钮，而不是让用户对着空白猜。
+
+### Added
+
+- **K 线右侧价格刻度**：K 线此前**完全没有纵轴**（分时图有），用户无法从图上读出价位。新增纯函数 `priceAxisTicks()` 生成刻度（便于数值对照测试），并修正了命中判定——它原本除以整个 viewBox 宽度而不是绘图带宽度，最右侧一根会误判。刻度文字走 HTML 浮层（复用分时图的 `.lkb-maxis`）而不是 SVG 文本：`preserveAspectRatio="none"` 会把 SVG 文本横向拉伸。顺带确认 y 方向本来就是等比的（`svg` 高度恒等于 viewBox 高度），不是缺陷。
+- **龙虎榜日期选择器**：服务端现在真的支持 `?date=`，界面上必须能选到它，否则这个能力等于不存在。请求日与显示日不同时明确提示"（2026-10-09 尚未发布，已回溯到最近交易日）"。日期上限用新增的 `todayDateStr()`（本机时区）而不是 `toISOString()`——后者按 UTC 取日期，北京时间清晨会让"今天"这个选项消失。
+
+### Tests
+
+- 新增 `p2-silent-fixes-test.mjs`（无网络）：`parseDateOnly` 拒绝假日期、路由以请求日期为首个上游查询、只往过去回溯、周末不进上游、400 文案；`priceAxisTicks` 的端点/单调性/退化区间（`min === max` 不产生 NaN、`count=1` 不除零）；K 线轴与命中判定的接线；`FflowChart` 悬停接线与 clamp；`loadThrough` 的页号保留与去重；`topWindow` 的 z 选择（含缺 `z`、并列、空列表）；四处用户操作确实接了 `notifyFailure`；日期选择器真的把 `lhQuery` 发给了服务端、失败时清掉旧行旧日期；`todayDateStr` 的本地日期语义。
+- 上述断言逐条做过**变异验证**：把每个修复临时还原，确认测试会失败（而不是恒真）。
+- `client-bundle-test.mjs` 补第 6 节：**14 个客户端模块的导入/导出必须配对**。这条是踩坑后补的——`lib/client.js` 是提交进仓库的产物，而 esbuild 构建失败时**不会覆盖产物**，于是"重建后产物哈希不变"会被误读成"构建成功且幂等"。当时 `detail.js` 重建后漏了 `StockDetailWindow` 的 `export`，构建一直在报错，产物却看起来"稳定"。现在直接检查配对，并按文件名+符号名报错。
+- `p1-f10-longhu-test.mjs` 第 3 节重写：断言首个上游请求带的是**请求日期**（此前完全没断言，所以缺陷能一直躺着）、只往过去回溯、非法日期 400。
+- `npm test` 18 → 19 个套件。
+
+## [0.11.0] - 2026-10-10
+
+第一批"地基"改进：交易日历、上游请求治理、写接口加固，以及两个功能性缺陷修复。
+
+### Added
+
+- **交易日历与交易时段（`lib/calendar.js` + `GET /api/leekbox/calendar`）**：交易日不再用"周一~周五"猜——国庆/春节这类工作日假期此前被显示成"交易中"并整天重复打上游。真值来源不需要新接口：**指数日 K 的日期序列本身就是交易日序列**（节假日没有 K 线），`fetchEmDailyKline("sh000001", {lmt:60})` 取 60 根推导，缓存 12 小时。`sessionState()` 给出 `preOpen / auction(9:15–9:25) / open / lunch / closed / weekend / holiday`，时刻一律按**东八区**判定（宿主机时区不参与 —— 用户在 UTC 机器上跑插件时结论必须一样）。首次请求**不阻塞**：先用工作日启发式回答、`source: "weekday-fallback"` 如实标注，后台把真日历建好（单飞）后再切换。`/health` 与 `/sentiment` 顺带回带时段摘要。
+- **路由级缓存 + 单飞（`lib/route-cache.js`）**：`/quote` `/indices` `/minute` `/kline` `/rank` `/sector` `/fflow` `/f10` `/longhu` `/news` `/sentiment` 此前**每次请求都直打上游**，而客户端是 15~60s 轮询、多开详情窗还会并发同码请求 —— 重复请求不只是浪费，它会主动触发东财按出口 IP 的限流（项目自己记过这件事）。现在统一套 `cached()`：TTL 命中、**单飞**（并发同 key 共享一个上游调用，这是缓存挡不住的那一层）、**stale-if-error**（上游抖动时给上次成功值：榜单 10 分钟 / 历史 K 线 30 分钟 / F10 24 小时 / 快讯 30 分钟），失败照旧抛出、绝不写入"空快照"。TTL 支持按交易时段放宽（`sessionTtl`，默认 ×20），盘后与节假日的无效请求随之消失。顺带删掉两处手写 LRU（`/f10`、`/longhu`），它们都没有单飞。
+- **`GET /api/leekbox/metrics`**：版本 / uptime / 时段状态 / 索引状态 / 各缓存的 size·hits·misses·stores·evictions·staleServes·hitRate。`/health` 也带上版本号与同一份缓存统计——以前只有自选与预警两个计数，"跑的是哪一版""到底在限流还是源挂了"都查不出来。
+
+### Changed
+
+- **写接口跨站加固**：回环栅栏只看 socket 与 Host，挡不住浏览器发起的跨站请求 —— 恶意页面 `fetch(..., {mode:"no-cors", body:"{...}"})` 打本机端口时 Host 仍是 `127.0.0.1`，响应读不到但**写操作已经生效**（可盲改自选/预警，还能触发全市场扫描）。现在写路由额外要求 `Origin` 缺失或指向本机（`Origin: null` 与其他站点 403），且 `Content-Type` 必须是 `application/json`（否则 415）—— 跨站 `no-cors` 的字符串 body 默认是 `text/plain`，这一条把它堵死。同源 JSON、脚本/curl（无 Origin）不受影响。
+- **`/kline` 兜底与请求的复权口径对齐**：东财兜底此前写死 `fqt=1`（前复权）却回显调用方请求的 `fq`，请求 `hfq`/`none` 会拿到**前复权数据却标着 hfq**（静默错数据）。现在按 `fq` 映射 `fqt`（qfq→1 / hfq→2 / none→0），周期也支持 `klt` 101/102/103，兜底不再只对日线生效。
+- **`/sentiment` 部分降级**：涨停/炸板/跌停池（push2ex 单主机、无镜像）挂掉时，此前整张情绪卡 502；现在与涨跌家数各自独立降级为 `null`（响应带 `partial: true`），两路都失败才报错。
+- **`/longhu` 缓存按"日期 + 分页"分键**：此前只按日期分键，翻页会互相顶掉缓存。
+- **选股 `universe` 加 3000 上限**：`universe: 0` 的含义是"全市场"（约 56 页 clist + 5400 只逐只拉 K 线），直接调 API 能把它变成一次 IP 限流；客户端下拉最多只给到 1500。超出按上限处理而不是拒绝。
+
+### Fixed
+
+- **价格预警只在面板打开时生效**（P0）：`AlertWatcher` 是 `LeekBoxPanel` 的子节点，关面板走 `root.unmount()` 就把盯盘定时器一起卸载了，面板关闭期间预警完全不判定 —— README 承诺的"交易时段自动盯盘"静默失效。现在把它提到 `entry.js` 的 `apply()`，随**插件**存活并自带 toast 宿主（面板没开时也能弹），toast 改为 `core` 里的订阅式广播（`pushToast`/`onToast`/`ToastStack`）。
+- **行情页板块/龙虎榜永久卡在"加载中"**（P0）：`market-tab.js` 的 `loadRank`/`loadSector`/`loadLonghu` 共用一个 `loadSeq`，而 60s 轮询无条件调 `loadRank()` —— 看板块时在飞的板块请求被判成过期，`.finally` 里的 `setSectorLoading(false)` 被跳过，表格就再也不会结束 loading。现在三个数据域各有独立序号，且轮询按当前页签只刷看得见的那个（顺带省掉板块页签下每 60s 一次白打的 clist）。
+- **`fq=none` + week/month 直接 502**：腾讯对 `fq=none` 把序列放在裸周期键下（`day`/`week`/`month`），旧代码恒取 `"day"`，于是周线/月线取不到数据。
+- **轮询不看页面可见性、也没有交易日历**：`useInterval`/`useTradingInterval` 现在在页面不可见时不发请求，回到前台立即补一次；`marketOpenLabel` 换成语义更细的 `marketSession()`（旧签名的字段仍在，兼容既有调用点）。
+- **客户端竞时段边界判错**：客户端的时段判定原本写成 `minutes < 9*60+25 → preOpen`，把 9:15–9:25 这段报成"盘前"而不是"集合竞价"（与服务端 `sessionState()` 不一致）。现在抽成纯函数 `classifySession()` 并由测试逐点对照服务端，两边口径一致。
+
+### Tests
+
+- 新增 `calendar-test.mjs`（无网络）：东八区时刻换算与跨日边界、9:15/9:25/9:30/11:30/13:00/15:00 逐点时段核对、工作日假期必须判为休市、无日历时如实退化并标注 source、`sessionTtl` 放大、快照形状、构建单飞与失败降级、未注入 provider 也不抛，以及**客户端与服务端的时段口径逐一对照**（从产物里抽出客户端的 `classifySession`，与 `sessionState()` 在一天 295 个采样点 × 交易日/休市两种日历上比对，含全部边界）——这条对照当场抓出了客户端竞时段边界写成 `minutes < 9:25 → preOpen` 的错判（`9:15–9:25` 会被报成"盘前"而不是"集合竞价"）。
+- 新增 `route-cache-test.mjs`（无网络）：TTL 命中/过期、单飞（5 并发只打 1 次上游）、失败不写缓存且并发失败共享同一 Promise、stale-if-error 窗口内外、真 LRU 淘汰、真路由接线（`/quote` 并发同 codes 只打一次腾讯、`/health` 带版本与缓存统计、`/metrics`）以及写接口加固的六种输入（跨站 Origin、`Origin: null`、伪造回环前缀、无 Origin、`text/plain`、带 charset 的 JSON）。
+- `client-bundle-test.mjs` 补第 4/5 节：`apply()` 在最小 DOM 桩上必须挂得起来；**预警看护与交易日历时钟必须由 entry.js 挂载**、面板不得再渲染 `AlertWatcher`（防止以后被重构回面板，那会让预警再次随面板卸载）；产物必须带可见性门控与 `/calendar`。
+- 既有测试的写请求补上 `content-type: application/json` 与同源 `Origin`（写锁生效后的必然要求）：`p0-position-alerts-test.mjs`、`error-text-test.mjs`、`screener-meta-test.mjs`、`verify-fixes.mjs`。
+- `npm test` 16 → 18 个套件；CI 的 `node --check` 补 `lib/calendar.js` 与 `lib/route-cache.js`。
+
 ## [0.10.2] - 2026-10-09
 
 ### Fixed

@@ -42,7 +42,8 @@ function makePost(url, body) {
 	req.method = "POST";
 	req.url = url;
 	req.socket = { remoteAddress: "127.0.0.1" };
-	req.headers = { host: "localhost" };
+	// 写路由要求 application/json + 同源 Origin（见 lib/index.js 的 guard）。
+	req.headers = { host: "localhost", "content-type": "application/json", origin: "http://localhost" };
 	return req;
 }
 function makeRes() {
