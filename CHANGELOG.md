@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.3] - 2026-10-11
+
+### Fixed
+
+- **根治切 tab 页面闪动**：此前只是加了淡入动画，未解决根因——面板卡片无固定高度，切页签时整块窗口随内容「空态 → 满载」伸缩。现在 `.lkb_card` 固定 `height:min(640px,88vh)`，窗口框架不再抖动，内容区在固定框架内滚动；大盘页（默认首页）加载中渲染 4 张 shimmer 骨架卡片（复用 `lkb-shimmer`），消除空态塌陷；动画改为纯淡入（去掉 translateY 位移、时长 160ms）。均尊重 `prefers-reduced-motion`。
+
 ## [0.12.2] - 2026-10-11
 
 ### Changed
