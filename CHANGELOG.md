@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.1] - 2026-10-11
+
+### Changed
+
+- **标签栏美化**：五个页签（大盘 / 行情 / 自选 / 选股 / 快讯）的分段控件重新打磨——轨道圆角与内阴影、选中项品牌色光晕与描边、图标透明度过渡（不缩放、不位移）、徽标光晕，暗色模式同步对齐。保留并完善 SVG 图标、`role="tablist"`/`role="tab"`/`aria-selected` 无障碍语义、←/→/Home/End 键盘导航与自选数量徽标。
+
 ## [0.12.0] - 2026-10-10
 
 第二批"静默失败"专项：六个缺陷的共同点是**不抛异常、不报错**——只是悄悄给出错误的结果，或者悄悄什么都不做。所以修复的重点不是"让它能跑"，而是"让它出错时说得出来"。
