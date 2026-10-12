@@ -8,6 +8,7 @@ export function IndicesTab({ onOpen }) {
 	const [indices, setIndices] = useState([]);
 	const [error, setError] = useState("");
 	const [ts, setTs] = useState("");
+	const [loading, setLoading] = useState(true);
 	const load = useCallback(() => {
 		api(API.indices)
 			.then((data) => {
@@ -15,7 +16,8 @@ export function IndicesTab({ onOpen }) {
 				setTs(nowTime());
 				setError("");
 			})
-			.catch((e) => setError(describeError(e)));
+			.catch((e) => setError(describeError(e)))
+			.finally(() => setLoading(false));
 	}, []);
 	useEffect(() => {
 		load();
@@ -30,7 +32,11 @@ export function IndicesTab({ onOpen }) {
 		h(
 			"div",
 			{ className: "lkb-grid" },
-			indices.map((q) => {
+			loading && indices.length === 0
+				? Array.from({ length: 4 }, (_, i) =>
+						h("div", { className: "lkb-indexCard lkb-indexCardSkel", key: `skel-${i}` })
+					)
+				: indices.map((q) => {
 				const dir = q.change > 0 ? "up" : q.change < 0 ? "down" : "flat";
 				const dirColor = dir === "up" ? "#e03131" : dir === "down" ? "#0f9d6e" : "#ced4da";
 				const arrow = dir === "up" ? "▲" : dir === "down" ? "▼" : "—";

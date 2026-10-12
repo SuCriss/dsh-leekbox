@@ -9,7 +9,7 @@ const CSS = `
 [data-dsh-frame][data-sidebar-collapsed] .lkb_entry{border-radius:50%;justify-content:center;width:36px;height:36px;margin:0 auto 12px;padding:0}
 [data-dsh-frame][data-sidebar-collapsed] .lkb_entryLabel{display:none}
 .lkb_overlay{background:var(--dsw-alias-bg-mask-2,#080a1073);z-index:9999;font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;display:block;position:fixed;inset:0}
-.lkb_card{background:var(--dsw-alias-bg-overlay,#fdfdfd);width:min(980px,94vw);max-width:min(980px,calc(100vw - 16px));max-height:88vh;color:var(--dsw-alias-label-primary,#1c1e26);border-radius:14px;flex-direction:column;display:flex;overflow:hidden;box-shadow:0 20px 70px #00000059;position:fixed;z-index:10000;margin:0}
+.lkb_card{background:var(--dsw-alias-bg-overlay,#fdfdfd);width:min(980px,94vw);max-width:min(980px,calc(100vw - 16px));height:min(640px,88vh);max-height:88vh;color:var(--dsw-alias-label-primary,#1c1e26);border-radius:14px;flex-direction:column;display:flex;overflow:hidden;box-shadow:0 20px 70px #00000059;position:fixed;z-index:10000;margin:0}
 .lkb_head{background:var(--dsw-alias-bg-base,#fff);align-items:center;gap:12px;padding:12px 18px;display:flex;border-bottom:1px solid var(--dsw-alias-border-l1,#e8e9ed);cursor:grab;touch-action:none;user-select:none}
 .lkb_head:active{cursor:grabbing}
 .lkb_headTitle{margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
@@ -40,8 +40,8 @@ const CSS = `
 .lkb_tab[data-active="true"] .lkb_tabBadge{background:#4c6ef5;color:#fff;box-shadow:0 1px 3px #4c6ef580}
 @media (prefers-reduced-motion:reduce){.lkb_tab,.lkb_tabBadge,.lkb_tabIcon{transition:none}}
 .lkb_body{padding:14px 18px 10px;overflow-y:auto;overflow-x:hidden;background:var(--dsw-alias-bg-layer-1,#f7f8fa);flex:1;scrollbar-gutter:stable}
-.lkb_tabPanelIn{animation:lkb-tabPanelIn .22s ease-out}
-@keyframes lkb-tabPanelIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.lkb_tabPanelIn{animation:lkb-tabPanelIn .16s ease-out}
+@keyframes lkb-tabPanelIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.lkb_tabPanelIn{animation:none}}
 .lkb-stickyTop{position:sticky;top:-14px;z-index:8;background:var(--dsw-alias-bg-layer-1,#f7f8fa);margin:-14px -18px 10px;padding:10px 18px 6px;display:flex;flex-direction:column;gap:7px;box-shadow:0 10px 16px -14px #00000047;border-bottom:1px solid var(--dsw-alias-border-l1,#eceef1)}
 .lkb-headRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -158,6 +158,9 @@ body[data-ds-dark-theme] .lkb-srBadge.t-lof{background:#6b5fa840;color:#c4b5fd}
 .lkb-indexCard{position:relative;background:var(--dsw-alias-bg-base,#fff);border:1px solid var(--dsw-alias-border-l1,#e8e9ed);border-radius:12px;padding:14px 16px;cursor:pointer;overflow:hidden;transition:border-color .15s, box-shadow .15s, transform .15s}
 .lkb-indexCard::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--lkb-dir,#ced4da)}
 .lkb-indexCard:hover{border-color:#bac8ff;box-shadow:0 4px 18px #4c6ef517;transform:translateY(-1px)}
+.lkb-indexCardSkel{cursor:default;min-height:118px;pointer-events:none;background:linear-gradient(90deg,var(--dsw-alias-bg-layer-1,#f1f2f4) 25%,var(--dsw-alias-interactive-bg-hover,#e9ebef) 45%,var(--dsw-alias-bg-layer-1,#f1f2f4) 65%);background-size:280% 100%;animation:lkb-shimmer 1.2s infinite linear;border-color:transparent}
+.lkb-indexCardSkel::before{display:none}
+.lkb-indexCardSkel:hover{border-color:transparent;box-shadow:none;transform:none}
 .lkb-indexName{font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
 .lkb-indexName .lkb-tag{font-size:10px;color:var(--dsw-alias-label-tertiary,#a2a7b3);background:var(--dsw-alias-bg-layer-1,#f2f3f5);padding:2px 8px;border-radius:99px;font-weight:400}
 .lkb-indexValue{font-size:24px;font-weight:700;margin:6px 0 2px;font-variant-numeric:tabular-nums}
