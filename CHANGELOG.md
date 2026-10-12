@@ -3,6 +3,13 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.13.1] - 2026-10-11
+
+### Changed
+
+- **事件驱动选股重做为主题热点驱动**：上一版误实现为「技术形态事件」（涨停/跌停/连板等），本版按需求改为**时事热点新闻驱动选股**——抓取 7×24 财经快讯（新浪/东财/金十），筛出带关联股票的新闻（新浪源 `ext.stocks`），重要新闻优先，批量补实时行情，前端以「热点列表 → 点热点展开关联股票」呈现。
+- 新增接口 `GET /api/leekbox/screener/events`（复用 NEWS_FETCHERS/mergeNews，45s TTL 缓存 + 单飞）；移除上一版 `signals.js` 的 EVENT_META/boardOf/limitPctFor/computeEvents/eventHits 及 validate/screener/cache 中的 `mode=event` 分支，恢复为 standard/multi 两条原流水线。
+
 ## [0.13.0] - 2026-10-11
 
 ### Added
