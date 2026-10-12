@@ -317,7 +317,11 @@ export function LeekBoxPanel({ onClose }) {
 					})
 				)
 			),
-			h("div", { className: "lkb_body", id: "lkb-tabpanel", role: "tabpanel", "aria-labelledby": `lkb-tab-${tab}` }, body),
+			h(
+			"div",
+			{ className: "lkb_body", id: "lkb-tabpanel", role: "tabpanel", "aria-labelledby": `lkb-tab-${tab}` },
+			h("div", { key: tab, className: "lkb_tabPanelIn" }, body)
+		),
 			h(
 				"div",
 				{ className: "lkb_foot" },

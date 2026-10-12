@@ -39,7 +39,10 @@ const CSS = `
 .lkb_tabBadge{flex:none;font-size:10px;font-weight:700;line-height:1;padding:2px 5px;border-radius:99px;background:#e2e5ec;color:var(--dsw-alias-label-secondary,#6b7280);font-variant-numeric:tabular-nums;transition:background .18s ease,color .18s ease}
 .lkb_tab[data-active="true"] .lkb_tabBadge{background:#4c6ef5;color:#fff;box-shadow:0 1px 3px #4c6ef580}
 @media (prefers-reduced-motion:reduce){.lkb_tab,.lkb_tabBadge,.lkb_tabIcon{transition:none}}
-.lkb_body{padding:14px 18px 10px;overflow:auto;background:var(--dsw-alias-bg-layer-1,#f7f8fa);flex:1}
+.lkb_body{padding:14px 18px 10px;overflow-y:auto;overflow-x:hidden;background:var(--dsw-alias-bg-layer-1,#f7f8fa);flex:1;scrollbar-gutter:stable}
+.lkb_tabPanelIn{animation:lkb-tabPanelIn .22s ease-out}
+@keyframes lkb-tabPanelIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.lkb_tabPanelIn{animation:none}}
 .lkb-stickyTop{position:sticky;top:-14px;z-index:8;background:var(--dsw-alias-bg-layer-1,#f7f8fa);margin:-14px -18px 10px;padding:10px 18px 6px;display:flex;flex-direction:column;gap:7px;box-shadow:0 10px 16px -14px #00000047;border-bottom:1px solid var(--dsw-alias-border-l1,#eceef1)}
 .lkb-headRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .lkb-pills{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
