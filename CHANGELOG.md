@@ -3,6 +3,13 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.13.0] - 2026-10-11
+
+### Added
+
+- **事件驱动策略选股**：选股页新增第三模式「事件驱动」，捕捉当日发生的具体短线事件（而非指标状态）。事件由日K（OHLCV）实时计算，**按板块区分涨跌停幅度**：主板 10%、创业板/科创板 20%、北交所 30%、主板 ST 5%。共 10 个事件：涨停、跌停、连板、一字板、地天板、跳空高开、放量突破、创20日新高、缩量回踩、冲高回落。个股至少命中设定数量的事件才入选，按命中事件数排序。
+- 服务端 `signals.js` 新增 `EVENT_META`、`boardOf()`、`limitPctFor()`、`computeEvents()`、`eventHits()`；`screenerMeta()` 下发 `events`；`screener-validate.js` 支持 `mode=event` + `events`/`minEventHits` 校验；结果缓存键纳入事件参数，避免不同事件组合互相穿透。
+
 ## [0.12.3] - 2026-10-11
 
 ### Fixed
