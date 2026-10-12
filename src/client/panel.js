@@ -17,6 +17,63 @@ const TABS = [
 	{ key: "news", label: "快讯" },
 ];
 
+/** 标签图标：手写 24×24 描边路径（Lucide 风格）。
+ *
+ * 不用 emoji：字体缺字时会出现豆腐块、各平台画风也不一致，而且 emoji 无法跟随
+ * currentColor 变主题色。统一描边 1.8、颜色继承文字，选中态由 CSS 换成主色。
+ */
+const TAB_ICONS = {
+	// 大盘：柱状图（指数概览）
+	indices: [
+		["path", { d: "M3 3v16.5A1.5 1.5 0 0 0 4.5 21H21" }],
+		["path", { d: "M17.5 18V10" }],
+		["path", { d: "M12.5 18V6" }],
+		["path", { d: "M7.5 18v-5" }],
+	],
+	// 行情：K 线（报价板）
+	market: [
+		["path", { d: "M8 3v2.5" }],
+		["rect", { x: 5.75, y: 5.5, width: 4.5, height: 8, rx: 1 }],
+		["path", { d: "M8 13.5V17" }],
+		["path", { d: "M16 6v2" }],
+		["rect", { x: 13.75, y: 8, width: 4.5, height: 9, rx: 1 }],
+		["path", { d: "M16 17v3" }],
+	],
+	// 自选：五角星
+	star: [["path", { d: "M12 3.6l2.6 5.27 5.82.85-4.21 4.1.99 5.78L12 16.87l-5.2 2.73.99-5.78-4.21-4.1 5.82-.85z" }]],
+	// 选股：漏斗筛选
+	screener: [
+		["path", { d: "M3.5 5.5h17" }],
+		["path", { d: "M6.5 12h11" }],
+		["path", { d: "M10 18.5h4" }],
+	],
+	// 快讯：报纸
+	news: [
+		["path", { d: "M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V19H5.5A1.5 1.5 0 0 1 4 17.5z" }],
+		["path", { d: "M16 9h2.5A1.5 1.5 0 0 1 20 10.5v6a2.5 2.5 0 0 1-2.5 2.5" }],
+		["path", { d: "M7 8.5h6" }],
+		["path", { d: "M7 12.5h6" }],
+	],
+};
+
+/** 把 TAB_ICONS 的路径描述渲染成 <svg>。 */
+function tabIcon(key) {
+	const paths = TAB_ICONS[key] ?? [];
+	return h(
+		"svg",
+		{
+			viewBox: "0 0 24 24",
+			fill: "none",
+			stroke: "currentColor",
+			strokeWidth: 1.8,
+			strokeLinecap: "round",
+			strokeLinejoin: "round",
+			focusable: "false",
+		},
+		paths.map(([tag, attrs], i) => h(tag, { key: i, ...attrs }))
+	);
+}
+
 /** 关"当前置顶"的那扇窗 —— 不是"最后打开"的那扇。
  *
  * wins 数组是插入顺序，而每扇窗的 z 由 focusWin/openStock 递增分配；用户点过
@@ -169,6 +226,27 @@ export function LeekBoxPanel({ onClose }) {
 			window.removeEventListener("leekbox:watchlist-changed", refresh);
 		};
 	}, []);
+	// 标签栏的键盘导航：←/→ 循环、Home/End 跳首尾。roving tabindex —— 只有选中项
+	// tabIndex=0，所以 Tab 键进得来、出去得走，不会在 5 个标签里转圈。
+	const onTabKeyDown = (e) => {
+		const { key } = e;
+		if (key !== "ArrowLeft" && key !== "ArrowRight" && key !== "Home" && key !== "End") return;
+		e.preventDefault();
+		const from = TABS.findIndex((t) => t.key === tab);
+		const to =
+			key === "Home"
+				? 0
+				: key === "End"
+					? TABS.length - 1
+					: key === "ArrowLeft"
+						? (from - 1 + TABS.length) % TABS.length
+						: (from + 1) % TABS.length;
+		setTab(TABS[to].key);
+		const nodes = e.currentTarget.querySelectorAll("button.lkb_tab");
+		if (nodes[to] !== void 0) nodes[to].focus();
+	};
+	// 自选数量做成标签徽标：用户不用切过去就知道自选里有几只。
+	const tabBadge = (key) => (key === "watchlist" && watchCodes.length > 0 ? watchCodes.length : null);
 	const mkt = marketOpenLabel();
 	const body =
 		tab === "indices"
@@ -210,10 +288,36 @@ export function LeekBoxPanel({ onClose }) {
 			),
 			h(
 				"div",
-				{ className: "lkb_tabBar" },
-				TABS.map((t) => h("button", { key: t.key, className: "lkb_tab", "data-active": tab === t.key ? "true" : "false", onClick: () => setTab(t.key) }, t.label))
+				{ className: "lkb_tabBar", role: "tablist", "aria-label": "韭菜盒子面板", onKeyDown: onTabKeyDown },
+				h(
+					"div",
+					{ className: "lkb_tabTrack" },
+					TABS.map((t) => {
+						const active = tab === t.key;
+						const badge = tabBadge(t.key);
+						return h(
+							"button",
+							{
+								key: t.key,
+								type: "button",
+								className: "lkb_tab",
+								id: `lkb-tab-${t.key}`,
+								role: "tab",
+								title: t.label,
+								"aria-selected": active ? "true" : "false",
+								"aria-controls": "lkb-tabpanel",
+								tabIndex: active ? 0 : -1,
+								"data-active": active ? "true" : "false",
+								onClick: () => setTab(t.key),
+							},
+							h("span", { className: "lkb_tabIcon", "aria-hidden": "true" }, tabIcon(t.key)),
+							h("span", { className: "lkb_tabLabel" }, t.label),
+							badge === null ? null : h("span", { className: "lkb_tabBadge" }, String(badge))
+						);
+					})
+				)
 			),
-			h("div", { className: "lkb_body" }, body),
+			h("div", { className: "lkb_body", id: "lkb-tabpanel", role: "tabpanel", "aria-labelledby": `lkb-tab-${tab}` }, body),
 			h(
 				"div",
 				{ className: "lkb_foot" },

@@ -21,10 +21,24 @@ const CSS = `
 .lkb_mktStatus[data-open="false"]{background:#f2f3f5;color:#8a8f9c}
 .lkb_close{cursor:pointer;background:0 0;border:none;color:var(--dsw-alias-label-secondary,#8a8f9c);font-size:20px;line-height:1;padding:4px 8px;border-radius:6px}
 .lkb_close:hover{background:var(--dsw-alias-interactive-bg-hover,#f2f3f5);color:var(--dsw-alias-label-primary)}
-.lkb_tabs{display:flex;gap:4px;padding:10px 18px 0;background:var(--dsw-alias-bg-base,#fff);border-bottom:1px solid var(--dsw-alias-border-l1,#e8e9ed)}
-.lkb_tab{border:1px solid transparent;color:var(--dsw-alias-label-secondary,#8a8f9c);cursor:pointer;background:0 0;border-radius:8px 8px 0 0;padding:7px 16px;font-size:13px;font-weight:500}
-.lkb_tab:hover{background:var(--dsw-alias-interactive-bg-hover,#f5f6f8)}
-.lkb_tab[data-active="true"]{color:var(--dsw-alias-label-primary,#1c1e26);font-weight:600;background:var(--dsw-alias-bg-layer-1,#f7f8fa);border-color:var(--dsw-alias-border-l1,#e8e9ed);border-bottom-color:transparent}
+/* ---- 标签栏：大盘 / 行情 / 自选 / 选股 / 快讯 ----------------------------------
+ * 分段控件(segmented control)：灰底浅槽 + 选中项浮起的白药丸，和选股页的 .lkb-seg
+ * 保持同一套语言。外层 .lkb_tabBar 负责留白与横向滚动(375px 窄屏放得下 5 个)。 */
+.lkb_tabBar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--dsw-alias-bg-base,#fff);border-bottom:1px solid var(--dsw-alias-border-l1,#e8e9ed);overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.lkb_tabBar::-webkit-scrollbar{display:none}
+.lkb_tabTrack{display:inline-flex;align-items:center;gap:3px;flex:none;padding:3px;border-radius:13px;background:var(--dsw-alias-bg-layer-1,#f1f3f6);border:1px solid var(--dsw-alias-border-l1,#e6e8ee);box-shadow:inset 0 1px 2px #1018280a}
+.lkb_tab{flex:none;height:32px;padding:0 13px;border:none;border-radius:10px;background:0 0;color:var(--dsw-alias-label-secondary,#7c8290);font-size:13px;font-weight:500;line-height:1;font-family:inherit;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;position:relative;transition:background .18s ease,color .18s ease,box-shadow .18s ease}
+.lkb_tab:hover{background:#ffffffb3;color:var(--dsw-alias-label-primary,#1c1e26)}
+.lkb_tab:active{background:#ffffff99}
+.lkb_tab:focus-visible{outline:2px solid #4c6ef5;outline-offset:1px}
+.lkb_tab[data-active="true"]{background:var(--dsw-alias-bg-base,#fff);color:#3b5bdb;font-weight:600;box-shadow:0 1px 2px #1018280f,0 2px 6px #3b5bdb26,0 0 0 1px #3b5bdb1f}
+.lkb_tabIcon{flex:none;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;color:currentColor;opacity:.82;transition:opacity .18s ease,color .18s ease}
+.lkb_tabIcon svg{display:block;width:15px;height:15px}
+.lkb_tab:hover .lkb_tabIcon{opacity:1}
+.lkb_tab[data-active="true"] .lkb_tabIcon{color:#4c6ef5;opacity:1}
+.lkb_tabBadge{flex:none;font-size:10px;font-weight:700;line-height:1;padding:2px 5px;border-radius:99px;background:#e2e5ec;color:var(--dsw-alias-label-secondary,#6b7280);font-variant-numeric:tabular-nums;transition:background .18s ease,color .18s ease}
+.lkb_tab[data-active="true"] .lkb_tabBadge{background:#4c6ef5;color:#fff;box-shadow:0 1px 3px #4c6ef580}
+@media (prefers-reduced-motion:reduce){.lkb_tab,.lkb_tabBadge,.lkb_tabIcon{transition:none}}
 .lkb_body{padding:14px 18px 10px;overflow:auto;background:var(--dsw-alias-bg-layer-1,#f7f8fa);flex:1}
 .lkb-stickyTop{position:sticky;top:-14px;z-index:8;background:var(--dsw-alias-bg-layer-1,#f7f8fa);margin:-14px -18px 10px;padding:10px 18px 6px;display:flex;flex-direction:column;gap:7px;box-shadow:0 10px 16px -14px #00000047;border-bottom:1px solid var(--dsw-alias-border-l1,#eceef1)}
 .lkb-headRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -179,16 +193,23 @@ body[data-ds-dark-theme] .lkb-srBadge.t-lof{background:#6b5fa840;color:#c4b5fd}
 .lkb-progress{height:5px;background:var(--dsw-alias-bg-layer-1,#eef0f3);border-radius:99px;overflow:hidden;margin-top:6px}
 .lkb-progressBar{height:100%;background:#4c6ef5;transition:width .3s}
 .lkb-score{display:inline-block;min-width:36px;text-align:center;font-weight:700;font-size:13px;padding:2px 6px;border-radius:6px;background:#eef2ff;color:#4353a3;font-variant-numeric:tabular-nums}
-body[data-ds-dark-theme] .lkb_card,body[data-ds-dark-theme] .lkb_head,body[data-ds-dark-theme] .lkb_tabs,body[data-ds-dark-theme] .lkb_foot{background:#2c2c2e}
+body[data-ds-dark-theme] .lkb_card,body[data-ds-dark-theme] .lkb_head,body[data-ds-dark-theme] .lkb_tabBar,body[data-ds-dark-theme] .lkb_foot{background:#2c2c2e}
 body[data-ds-dark-theme] .lkb_body{background:#1e1e1e}
 body[data-ds-dark-theme] .lkb_card table,body[data-ds-dark-theme] .lkb_indexCard,body[data-ds-dark-theme] .lkb_detailQuote,body[data-ds-dark-theme] .lkb_chartBox,body[data-ds-dark-theme] .lkb_newsItem,body[data-ds-dark-theme] .lkb_filters,body[data-ds-dark-theme] .lkb_input{background:#3a3a3c;border-color:#ffffff14}
 body[data-ds-dark-theme] .lkb_card th{background:#3a3a3c;border-color:#ffffff0f}
 body[data-ds-dark-theme] .lkb_card td{border-color:#ffffff0d}
-body[data-ds-dark-theme] .lkb_card tbody tr:hover,body[data-ds-dark-theme] .lkb_close:hover,body[data-ds-dark-theme] .lkb_tab:hover,body[data-ds-dark-theme] .lkb-btnGhost:hover{background:#ffffff12}
+body[data-ds-dark-theme] .lkb_card tbody tr:hover,body[data-ds-dark-theme] .lkb_close:hover,body[data-ds-dark-theme] .lkb-btnGhost:hover{background:#ffffff12}
 body[data-ds-dark-theme] .lkb_card tbody tr:hover{box-shadow:inset 2px 0 0 #6378dc}
 body[data-ds-dark-theme] .lkb-chip{background:#2c2c2e;border-color:#ffffff14;color:#c0c4cc}
 body[data-ds-dark-theme] .lkb-chip:hover{border-color:#6378dc66;color:#dbe4ff}
-body[data-ds-dark-theme] .lkb_tab[data-active="true"]{color:#fff;background:#3a3a3c;border-color:#ffffff14}
+body[data-ds-dark-theme] .lkb_tabTrack{background:#1b1b1d;border-color:#ffffff14;box-shadow:inset 0 1px 2px #00000080}
+body[data-ds-dark-theme] .lkb_tab{color:#9a9aa2}
+body[data-ds-dark-theme] .lkb_tab:hover{background:#ffffff14;color:#f1f1f2}
+body[data-ds-dark-theme] .lkb_tab:active{background:#ffffff0a}
+body[data-ds-dark-theme] .lkb_tab[data-active="true"]{background:#48484c;color:#dbe4ff;box-shadow:0 1px 3px #00000059,0 0 0 1px #a5b4fc2e}
+body[data-ds-dark-theme] .lkb_tab[data-active="true"] .lkb_tabIcon{color:#a5b4fc}
+body[data-ds-dark-theme] .lkb_tabBadge{background:#ffffff1f;color:#c0c4cc}
+body[data-ds-dark-theme] .lkb_tab[data-active="true"] .lkb_tabBadge{background:#5c7cfa;color:#fff;box-shadow:0 1px 3px #5c7cfa80}
 body[data-ds-dark-theme] .lkb-btn{color:#111827;background:#e5e5ea}
 body[data-ds-dark-theme] .lkb-btn:hover{background:#d1d5db}
 body[data-ds-dark-theme] .lkb-mktStatus[data-open="true"]{background:#30d15826;color:#30d158}
