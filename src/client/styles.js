@@ -321,6 +321,29 @@ body[data-ds-dark-theme] .lkb-srcBadge{background:#6378dc38;color:#a5b4fc}
 .lkb-switch[data-on="true"] .lkb-switchTrack{background:#4c6ef5}
 .lkb-switch[data-on="true"] .lkb-switchTrack::after{left:16px}
 .lkb-sigGroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px}
+/* ---- 事件驱动（时事热点）模式 ---- */
+.lkb-eventBar{display:flex;align-items:center;gap:10px}
+.lkb-eventBar .lkb-btnGhost{margin-left:auto}
+.lkb-eventList{display:flex;flex-direction:column;gap:8px}
+.lkb-eventItem{border:1px solid var(--dsw-alias-border-l1,#e8e9ed);border-radius:11px;background:var(--dsw-alias-bg-base,#fff);overflow:hidden;transition:border-color .15s}
+.lkb-eventItem:hover{border-color:#c7d2fe}
+.lkb-eventHead{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;user-select:none}
+.lkb-eventDot{flex:none;width:7px;height:7px;border-radius:50%;background:#cbd5e1}
+.lkb-eventDot[data-hot="true"]{background:#e03131;box-shadow:0 0 0 3px #e0313122}
+.lkb-eventText{flex:1;font-size:12.8px;line-height:1.55;color:var(--dsw-alias-label-primary,#1c1e26);min-width:0;overflow-wrap:break-word}
+.lkb-eventMeta{flex:none;font-size:10.5px;color:var(--dsw-alias-label-tertiary,#a2a7b3);white-space:nowrap}
+.lkb-eventArrow{flex:none;color:var(--dsw-alias-label-tertiary,#a2a7b3);font-size:12px;transition:transform .15s}
+.lkb-eventArrow[data-open="true"]{transform:rotate(180deg)}
+.lkb-eventStocks{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--dsw-alias-border-l1,#f0f1f4);padding:4px 0;animation:lkb-tabPanelIn .15s ease-out}
+.lkb-eventStock{display:flex;align-items:center;gap:12px;padding:7px 14px;cursor:pointer;transition:background .12s}
+.lkb-eventStock:hover{background:var(--dsw-alias-interactive-bg-hover,#f7f8fa)}
+.lkb-eventStock .lkb-name{font-size:12.5px;font-weight:500;color:var(--dsw-alias-label-primary,#1c1e26);min-width:74px}
+.lkb-eventStock .lkb-code{font-size:11px;color:var(--dsw-alias-label-tertiary,#a2a7b3)}
+.lkb-eventPrice{min-width:64px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;margin-left:auto}
+.lkb-eventPct{min-width:60px;text-align:right;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+body[data-ds-dark-theme] .lkb-eventItem{background:#3a3a3c;border-color:#ffffff14}
+body[data-ds-dark-theme] .lkb-eventStock:hover{background:#ffffff0f}
+body[data-ds-dark-theme] .lkb-eventStocks{border-top-color:#ffffff14}
 .lkb-sigGroup{border:1px solid var(--dsw-alias-border-l1,#eceef1);border-radius:11px;padding:10px 12px;background:var(--dsw-alias-bg-layer-1,#fafbfc)}
 .lkb-sigGroupTitle{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;font-weight:700;color:var(--dsw-alias-label-secondary,#5f6672);margin-bottom:8px}
 .lkb-sigCount{font-size:10px;border-radius:99px;padding:1px 7px;background:var(--dsw-alias-bg-layer-1,#f1f3f5);color:var(--dsw-alias-label-tertiary,#868e96);font-variant-numeric:tabular-nums;font-weight:600}

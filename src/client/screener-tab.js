@@ -46,19 +46,6 @@ const SCREEN_STRATEGIES_FALLBACK = [
 	{ key: "newHigh", label: "创60日新高", desc: "创60日新高+站上MA60" },
 	{ key: "strongRise", label: "强势连涨", desc: "连涨且均线多头" },
 ];
-/** 事件驱动策略的预设事件（离线兜底副本）。 */
-const SCREEN_EVENTS_FALLBACK = [
-	{ key: "limitUp", label: "涨停", desc: "收盘触及涨停（按板块区分幅度）" },
-	{ key: "limitDown", label: "跌停", desc: "收盘触及跌停（按板块区分幅度）" },
-	{ key: "limitUpStreak", label: "连板", desc: "连续2日及以上涨停（连板梯队）" },
-	{ key: "oneWord", label: "一字板", desc: "开盘即涨停且全天一字（开=高=低=收）" },
-	{ key: "groundToSky", label: "地天板", desc: "当日从跌停拉到涨停" },
-	{ key: "gapUp", label: "跳空高开", desc: "开盘价高于昨收2%以上（缺口）" },
-	{ key: "breakoutNewHigh", label: "放量突破", desc: "放量突破20日新高" },
-	{ key: "newHigh20", label: "创20日新高", desc: "收盘价创20日新高" },
-	{ key: "pullback", label: "缩量回踩", desc: "回踩20日线不破且缩量" },
-	{ key: "upperShadow", label: "冲高回落", desc: "长上影线且收跌（疑似炸板）" },
-];
 /**
  * 把服务端元数据整理成面板要用的形状。
  * @param {object|null} meta GET /screener/meta 的响应；为 null 时用本地兜底
@@ -79,10 +66,7 @@ function buildScreenMeta(meta) {
 	const strategies = Array.isArray(meta?.strategies) && meta.strategies.length > 0
 		? meta.strategies.map((s) => ({ key: s.key, label: s.label, desc: s.desc }))
 		: SCREEN_STRATEGIES_FALLBACK;
-	const events = Array.isArray(meta?.events) && meta.events.length > 0
-		? meta.events.map((s) => ({ key: s.key, label: s.label, desc: s.desc }))
-		: SCREEN_EVENTS_FALLBACK;
-	return { signals, labelOf, groups, strategies, events };
+	return { signals, labelOf, groups, strategies };
 }
 const NODE_CHIPS = [
 	{ v: "hs_a", label: "沪深A股" },
@@ -106,9 +90,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 	const [excludeST, setExcludeST] = useState(true);
 	const [require, setRequire] = useState({});
 	const [strategies, setStrategies] = useState({});
-	const [events, setEvents] = useState({});
 	const [minHits, setMinHits] = useState(2);
-	const [minEventHits, setMinEventHits] = useState(1);
 	const [minScore, setMinScore] = useState("0");
 	const [rows, setRows] = useState([]);
 	const [running, setRunning] = useState(false);
@@ -116,6 +98,11 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 	const [error, setError] = useState("");
 	const [ran, setRan] = useState(false);
 	const [meta, setMeta] = useState(() => buildScreenMeta(null));
+	// 事件驱动（时事热点）模式的状态：热点列表 + 展开态 + 加载/错误
+	const [hotEvents, setHotEvents] = useState([]);
+	const [eventsLoading, setEventsLoading] = useState(false);
+	const [eventsError, setEventsError] = useState("");
+	const [expandedEvent, setExpandedEvent] = useState(null);
 	const timerRef = useRef(null);
 	const metaLoadedRef = useRef(false);
 	useEffect(() => {
@@ -146,7 +133,22 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 	const set = (k) => (e) => setF((prev) => ({ ...prev, [k]: e.target.value }));
 	const toggleReq = (key) => () => setRequire((prev) => ({ ...prev, [key]: !prev[key] }));
 	const toggleStrat = (key) => () => setStrategies((prev) => ({ ...prev, [key]: !prev[key] }));
-	const toggleEvent = (key) => () => setEvents((prev) => ({ ...prev, [key]: !prev[key] }));
+	const loadEvents = () => {
+		if (eventsLoading) return;
+		setEventsLoading(true);
+		setEventsError("");
+		api(API.screenerEvents)
+			.then((data) => {
+				setHotEvents(data.events ?? []);
+			})
+			.catch((e) => setEventsError(describeError(e)))
+			.finally(() => setEventsLoading(false));
+	};
+	// 切到事件模式时自动拉一次热点
+	useEffect(() => {
+		if (mode === "event" && hotEvents.length === 0 && eventsError === "") loadEvents();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [mode]);
 	const run = () => {
 		if (running) return;
 		setRunning(true);
@@ -163,9 +165,6 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 		if (mode === "multi") {
 			params.strategies = meta.strategies.filter((s) => strategies[s.key]).map((s) => s.key);
 			params.minStrategyHits = Math.max(1, Number(minHits) || 2);
-		} else if (mode === "event") {
-			params.events = meta.events.filter((s) => events[s.key]).map((s) => s.key);
-			params.minEventHits = Math.max(1, Number(minEventHits) || 1);
 		} else {
 			params.minScore = Number(minScore) || 0;
 			params.require = meta.signals.filter((s) => require[s.key]).map((s) => s.key);
@@ -212,7 +211,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 		progress && progress.total > 0
 			? Math.min(100, Math.round(((progress.done ?? 0) / progress.total) * 100))
 			: null;
-	const selCount = mode === "multi" ? Object.values(strategies).filter(Boolean).length : mode === "event" ? Object.values(events).filter(Boolean).length : Object.values(require).filter(Boolean).length;
+	const selCount = mode === "multi" ? Object.values(strategies).filter(Boolean).length : Object.values(require).filter(Boolean).length;
 	const resetAll = () => {
 		setMode("standard");
 		setNode("hs_a");
@@ -221,9 +220,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 		setExcludeST(true);
 		setRequire({});
 		setStrategies({});
-		setEvents({});
 		setMinHits(2);
-		setMinEventHits(1);
 		setMinScore("0");
 	};
 	const rangeField = (label, lo, hi) =>
@@ -256,7 +253,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 					mode === "multi"
 						? "多策略交叉选股 —— 同时满足多个预设策略（交集）才入选，策略数越高越强势"
 						: mode === "event"
-							? "事件驱动选股 —— 捕捉当日发生的具体事件（涨停/跌停/连板/一字板/地天板/放量突破等），事件越多越强势"
+							? "事件驱动选股 —— 从 7×24 财经快讯中提取时事热点，按热点关联受益股，点热点展开关联股票"
 							: "股票池 · 基础条件 · 技术信号 —— 实时日K计算指标，综合评分排序"
 				)
 			),
@@ -267,11 +264,62 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 				h("button", { type: "button", className: "lkb-segBtn", "data-active": mode === "multi" ? "true" : "false", onClick: () => setMode("multi") }, "多策略交叉"),
 				h("button", { type: "button", className: "lkb-segBtn", "data-active": mode === "event" ? "true" : "false", onClick: () => setMode("event") }, "事件驱动")
 			),
-			selCount > 0 ? h("span", { className: "lkb-sigCount", style: { fontSize: 11.5, padding: "3px 12px" }, "data-n": "true" }, mode === "multi" ? `已选 ${selCount} 个策略` : mode === "event" ? `已选 ${selCount} 个事件` : `已选 ${selCount} 个信号`) : null
+			selCount > 0 && mode !== "event" ? h("span", { className: "lkb-sigCount", style: { fontSize: 11.5, padding: "3px 12px" }, "data-n": "true" }, mode === "multi" ? `已选 ${selCount} 个策略` : `已选 ${selCount} 个信号`) : null
 		),
-		h(
-			"div",
-			{ className: "lkb-scCard" },
+		mode === "event"
+			? h(
+					"div",
+					{ className: "lkb-scCard" },
+					h(
+						"div",
+						{ className: "lkb-eventBar" },
+						h("span", { className: "lkb-status" }, eventsLoading ? h("span", { className: "lkb-spinner" }) : `共 ${hotEvents.length} 条热点`),
+						h("button", { className: "lkb-btnGhost", onClick: loadEvents, disabled: eventsLoading }, eventsLoading ? "抓取中…" : "刷新热点")
+					),
+					eventsError !== ""
+						? h("div", { className: "lkb-error" }, eventsError)
+						: hotEvents.length === 0 && !eventsLoading
+							? h("div", { className: "lkb-emptyState" }, h("div", { className: "lkb-emptyIcon" }, "📰"), "当前快讯里暂未抓到带关联股票的热点", h("div", { style: { marginTop: 4, fontSize: 11.5 } }, "稍后刷新试试，或快讯源暂时未标注关联个股"))
+							: h(
+									"div",
+									{ className: "lkb-eventList" },
+									hotEvents.map((ev) => {
+										const open = expandedEvent === ev.id;
+										return h(
+											"div",
+											{ className: "lkb-eventItem", key: ev.id },
+											h(
+												"div",
+												{ className: "lkb-eventHead", onClick: () => setExpandedEvent(open ? null : ev.id) },
+												h("span", { className: "lkb-eventDot", "data-hot": ev.important ? "true" : "false" }),
+												h("span", { className: "lkb-eventText" }, ev.text),
+												h("span", { className: "lkb-eventMeta" }, ev.source === "sina" ? "新浪" : ev.source === "em" ? "东财" : ev.source === "jin10" ? "金十" : ev.source, " · ", ev.stocks.length, " 只"),
+												h("span", { className: "lkb-eventArrow", "data-open": open ? "true" : "false" }, "▾")
+											),
+											open
+												? h(
+														"div",
+														{ className: "lkb-eventStocks" },
+														ev.stocks.map((s) =>
+															h(
+																"div",
+																{ className: "lkb-eventStock", key: s.code, onClick: (e) => openOnRow(e, onOpen, s.code, s.name) },
+																h("span", { className: "lkb-name" }, s.name),
+																h("span", { className: "lkb-code" }, s.code),
+																h("span", { className: "lkb-eventPrice " + trend(s.changePct) }, s.price === null || s.price === void 0 ? "—" : fmt(s.price)),
+																h("span", { className: "lkb-eventPct " + trend(s.changePct) }, s.changePct === null || s.changePct === void 0 ? "—" : fmtPct(s.changePct)),
+																h(StarButton, { code: s.code, name: s.name, on: isWatched(watchSet, s.code), confirmText: `确定将 ${s.name}（${s.code}）移出自选吗？` })
+															)
+														)
+													)
+												: null
+										);
+									})
+								)
+				)
+			: h(
+					"div",
+					{ className: "lkb-scCard" },
 			h(
 				"div",
 				{ className: "lkb-scRow" },
@@ -344,44 +392,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 							)
 						)
 					)
-				: mode === "event"
-					? h(
-							"div",
-							{ className: "lkb-condBlock" },
-							h("div", { className: "lkb-scFieldLabel" }, "事件类型（勾选参与筛选，个股需至少命中设定数量的事件）"),
-							h(
-								"div",
-								{ className: "lkb-sigGroups" },
-								meta.events.map((s) => {
-									const on = events[s.key] === true;
-									return h(
-										"button",
-										{ key: s.key, type: "button", className: "lkb-chip2", "data-on": on ? "true" : "false", onClick: toggleEvent(s.key), title: s.desc, style: { flexDirection: "column", alignItems: "flex-start", gap: 2, padding: "7px 11px" } },
-										h("span", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 } }, h("span", { className: "lkb-chip2Dot" }), s.label),
-										h("span", { style: { fontSize: 10.5, color: "#868e96", fontWeight: 400 } }, s.desc)
-									);
-								})
-							),
-							h(
-								"div",
-								{ className: "lkb-scRow", style: { gap: 12, alignItems: "center" } },
-								h(
-									"div",
-									{ className: "lkb-condBlock" },
-									h("div", { className: "lkb-scFieldLabel" }, "至少命中事件数"),
-									h(
-										"div",
-										{ className: "lkb-rangeGroup" },
-										h(
-											"select",
-											{ className: "lkb-input lkb-scSelect", value: String(minEventHits), onChange: (e) => setMinEventHits(Number(e.target.value)) },
-											[1, 2, 3, 4, 5].map((n) => h("option", { value: String(n), key: n }, `${n} 个事件`))
-										)
-									)
-								)
-							)
-						)
-					: h(
+				: h(
 						"div",
 						{ className: "lkb-condBlock" },
 						h("div", { className: "lkb-scFieldLabel" }, "技术信号（勾选 = 必须满足，全部参与加权评分）"),
@@ -408,7 +419,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 					? h("div", { className: "lkb-rangeGroup" }, h("span", { className: "lkb-unit" }, "综合评分 ≥"), h("input", { className: "lkb-input lkb-scoreInput", value: minScore, onChange: (e) => setMinScore(e.target.value) }))
 					: null,
 				h("button", { className: "lkb-runBtn", disabled: running, onClick: run }, running ? "扫描中…" : "开始选股 ▸"),
-				h("span", { className: "lkb-status", style: { marginLeft: "auto" } }, mode === "multi" ? "基于日K实时命中 MACD / 均线 / 布林 / 量能 / 超卖等多策略" : mode === "event" ? "基于日K实时捕捉 涨停 / 跌停 / 连板 / 一字板 / 地天板 / 放量突破等事件" : "基于日K实时计算 MACD / KDJ / RSI / 均线 / 布林")
+				h("span", { className: "lkb-status", style: { marginLeft: "auto" } }, mode === "multi" ? "基于日K实时命中 MACD / 均线 / 布林 / 量能 / 超卖等多策略" : "基于日K实时计算 MACD / KDJ / RSI / 均线 / 布林")
 			),
 			running && progress
 				? h(
@@ -426,7 +437,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 					{ className: "lkb-emptyState" },
 					h("div", { className: "lkb-emptyIcon" }, "🫥"),
 					"没有符合条件的股票",
-					h("div", { style: { marginTop: 4, fontSize: 11.5 } }, mode === "multi" ? "试试勾选更多策略，或降低「至少命中策略数」门槛" : mode === "event" ? "试试勾选更多事件，或降低「至少命中事件数」门槛" : "试试放宽价格 / 换手区间，或减少必选信号")
+					h("div", { style: { marginTop: 4, fontSize: 11.5 } }, mode === "multi" ? "试试勾选更多策略，或降低「至少命中策略数」门槛" : "试试放宽价格 / 换手区间，或减少必选信号")
 				)
 			: null,
 		rows.length > 0
@@ -436,7 +447,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 					h(
 						"div",
 						{ className: "lkb-resSummary" },
-						h("span", null, mode === "multi" ? `共 ${rows.length} 只匹配 · 按命中策略数排序` : mode === "event" ? `共 ${rows.length} 只匹配 · 按命中事件数排序` : `共 ${rows.length} 只匹配 · 按综合评分排序`),
+						h("span", null, mode === "multi" ? `共 ${rows.length} 只匹配 · 按命中策略数排序` : `共 ${rows.length} 只匹配 · 按综合评分排序`),
 						h("span", { className: "lkb-status" }, "首批扫描较慢 · 结果有缓存")
 					),
 					h(
@@ -450,12 +461,12 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 								null,
 								h("th", null, "#"),
 								h("th", null, "名称"),
-								mode === "multi" ? h("th", null, "命中") : mode === "event" ? h("th", null, "事件") : h("th", null, "评分"),
+								mode === "multi" ? h("th", null, "命中") : h("th", null, "评分"),
 								h("th", null, "现价"),
 								h("th", null, "涨跌幅"),
 								h("th", null, "换手"),
 								h("th", null, "量比"),
-								h("th", null, mode === "multi" ? "命中的策略" : mode === "event" ? "命中的事件" : "信号"),
+								h("th", null, mode === "multi" ? "命中的策略" : "信号"),
 								h("th", null, "")
 							)
 						),
@@ -470,9 +481,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 									h("td", null, h("span", { className: "lkb-name" }, r.name), h("span", { className: "lkb-code" }, r.code)),
 									mode === "multi"
 										? h("td", null, h("span", { className: "lkb-scorePill", "data-tier": (r.strategyCount ?? 0) >= 4 ? "3" : (r.strategyCount ?? 0) >= 3 ? "2" : "1" }, r.strategyCount ?? 0))
-										: mode === "event"
-											? h("td", null, h("span", { className: "lkb-scorePill", "data-tier": (r.eventCount ?? 0) >= 3 ? "3" : (r.eventCount ?? 0) >= 2 ? "2" : "1" }, r.eventCount ?? 0))
-											: h("td", null, h("span", { className: "lkb-scorePill", "data-tier": scoreTier(r.score ?? 0) }, r.score)),
+										: h("td", null, h("span", { className: "lkb-scorePill", "data-tier": scoreTier(r.score ?? 0) }, r.score)),
 									h("td", { className: trend(r.change) }, fmt(r.price)),
 									h("td", { className: trend(r.change) }, fmtPct(r.changePct)),
 									h("td", null, r.turnoverRate === null ? "—" : fmt(r.turnoverRate) + "%"),
@@ -483,8 +492,8 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 										h(
 											"span",
 											{ className: "lkb-signalTags" },
-											(mode === "multi" ? r.strategies ?? [] : mode === "event" ? r.events ?? [] : r.signals ?? []).slice(0, 3).map((t) => h("span", { className: "lkb-signalTag", key: t }, t)),
-											(mode === "multi" ? r.strategies ?? [] : mode === "event" ? r.events ?? [] : r.signals ?? []).length > 3 ? h("span", { className: "lkb-signalMore", key: "__more" }, `+${(mode === "multi" ? r.strategies ?? [] : mode === "event" ? r.events ?? [] : r.signals ?? []).length - 3}`) : null
+											(mode === "multi" ? r.strategies ?? [] : r.signals ?? []).slice(0, 3).map((t) => h("span", { className: "lkb-signalTag", key: t }, t)),
+											(mode === "multi" ? r.strategies ?? [] : r.signals ?? []).length > 3 ? h("span", { className: "lkb-signalMore", key: "__more" }, `+${(mode === "multi" ? r.strategies ?? [] : r.signals ?? []).length - 3}`) : null
 										)
 									),
 									h("td", null, h(StarButton, { code: r.code, name: r.name, on: isWatched(watchSet, r.code), confirmText: `确定将 ${r.name}（${r.code}）移出自选吗？` }))

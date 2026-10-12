@@ -20,6 +20,7 @@ export const API = {
 	alerts: "/api/leekbox/alerts",
 	screener: "/api/leekbox/screener",
 	screenerMeta: "/api/leekbox/screener/meta",
+	screenerEvents: "/api/leekbox/screener/events",
 };
 
 const ERR_FALLBACK = "数据获取失败，请稍后重试";
