@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.2] - 2026-10-11
+
+### Changed
+
+- **tab 切换动效优化**：修复切页签时页面「抖动」——正文切换改为淡入 + 6px 上浮入场动画（`.lkb_tabPanelIn`，仅 transform/opacity，GPU 合成不触发重排）；`.lkb_body` 用 `scrollbar-gutter: stable` 让滚动条槽位常驻、`overflow-x: hidden` 防横向滚动条，切换时内容不再左右横跳。均尊重 `prefers-reduced-motion`。
+
 ## [0.12.1] - 2026-10-11
 
 ### Changed
