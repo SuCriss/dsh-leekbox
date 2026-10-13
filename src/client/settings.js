@@ -4,22 +4,26 @@
 // 面板头部 ⚙️ 打开。配置读/写走 core.js 的全局单例（saveAnalysisConfig /
 // getAnalysisConfig），密钥只在服务端落盘，界面只显示脱敏值。
 //
-// 模型体系对齐 DSH 客户端的多 provider 模型：`api: openai-completions` 是主流
-// 协议，覆盖 OpenAI / DeepSeek / Moonshot / 智谱 / 通义 / b.ai 等一大片厂商，
-// 不是只能 OpenAI 一家。这里用「服务商下拉 + 模型下拉（可手填）+ 获取模型」。
+// 模型体系对齐 DSH 客户端的多 provider：`api: openai-completions` 是主流协议
+// （OpenAI / DeepSeek / Moonshot / 智谱 / 通义 / b.ai 等），另支持 Anthropic
+// Claude 原生 Messages API（`api: anthropic`）。用「服务商下拉 + 模型下拉（可
+// 手填）+ 获取模型」。
 import { h, useEffect, useState } from "./react.js";
 import { API, api, describeError, getAnalysisConfig, saveAnalysisConfig } from "./core.js";
 
-/** 预设服务商（都是 OpenAI 兼容的 /chat/completions 协议）。models 是离线兜底，
- *  点「获取模型」会用服务端 GET /models 拉真实列表覆盖。 */
+/**
+ * 预设服务商。api 字段：openai = OpenAI 兼容 /chat/completions；anthropic =
+ * Anthropic Messages API。models 是离线兜底，点「获取模型」用服务端拉真实列表覆盖。
+ */
 const PROVIDERS = [
-	{ key: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", models: ["deepseek-chat", "deepseek-reasoner"] },
-	{ key: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "o3-mini"] },
-	{ key: "moonshot", label: "Moonshot Kimi", baseUrl: "https://api.moonshot.cn/v1", models: ["moonshot-v1-8k", "moonshot-v1-32k", "kimi-k2-0711-preview"] },
-	{ key: "zhipu", label: "智谱 GLM", baseUrl: "https://open.bigmodel.cn/api/paas/v4", models: ["glm-4-flash", "glm-4-air", "glm-4-plus", "glm-4.5"] },
-	{ key: "qwen", label: "通义千问", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", models: ["qwen-turbo", "qwen-plus", "qwen-flash", "qwen-max"] },
-	{ key: "bai", label: "b.ai", baseUrl: "https://api.b.ai/v1", models: ["mimo-v2.5", "qwen3.8-flash"] },
-	{ key: "custom", label: "自定义", baseUrl: "", models: [] },
+	{ key: "deepseek", label: "DeepSeek", api: "openai", baseUrl: "https://api.deepseek.com/v1", models: ["deepseek-chat", "deepseek-reasoner"] },
+	{ key: "openai", label: "OpenAI", api: "openai", baseUrl: "https://api.openai.com/v1", models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "o3-mini"] },
+	{ key: "anthropic", label: "Anthropic Claude", api: "anthropic", baseUrl: "https://api.anthropic.com", models: ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-7-sonnet-latest", "claude-sonnet-4-20250514"] },
+	{ key: "moonshot", label: "Moonshot Kimi", api: "openai", baseUrl: "https://api.moonshot.cn/v1", models: ["moonshot-v1-8k", "moonshot-v1-32k", "kimi-k2-0711-preview"] },
+	{ key: "zhipu", label: "智谱 GLM", api: "openai", baseUrl: "https://open.bigmodel.cn/api/paas/v4", models: ["glm-4-flash", "glm-4-air", "glm-4-plus", "glm-4.5"] },
+	{ key: "qwen", label: "通义千问", api: "openai", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", models: ["qwen-turbo", "qwen-plus", "qwen-flash", "qwen-max"] },
+	{ key: "bai", label: "b.ai", api: "openai", baseUrl: "https://api.b.ai/v1", models: ["mimo-v2.5", "qwen3.8-flash"] },
+	{ key: "custom", label: "自定义", api: "openai", baseUrl: "", models: [] },
 ];
 
 /** 按 baseUrl 反查预设服务商（忽略末尾斜杠差异）。 */
@@ -31,6 +35,7 @@ function providerByBaseUrl(baseUrl) {
 
 export function SettingsDialog({ onClose }) {
 	const [provider, setProvider] = useState("custom");
+	const [api, setApi] = useState("openai");
 	const [baseUrl, setBaseUrl] = useState("");
 	const [model, setModel] = useState("");
 	const [modelOptions, setModelOptions] = useState([]);
@@ -47,6 +52,7 @@ export function SettingsDialog({ onClose }) {
 		setBaseUrl(c.baseUrl);
 		setModel(c.model);
 		setMaskedKey(c.maskedKey);
+		setApi(c.api === "anthropic" ? "anthropic" : "openai");
 		setApiKey("");
 		setMsg("");
 		if (p !== null) {
@@ -70,23 +76,29 @@ export function SettingsDialog({ onClose }) {
 		return () => window.removeEventListener("keydown", onKey, true);
 	}, [onClose]);
 
-	// 切服务商：自动填 baseUrl + 用该服务商的预设模型列表，模型名清空让用户选。
+	// 切服务商：自动填 baseUrl + 协议 + 用该服务商的预设模型列表，模型名清空让用户选。
 	const onProvider = (key) => {
 		setProvider(key);
 		const p = PROVIDERS.find((x) => x.key === key);
+		setApi(p?.api ?? "openai");
 		setBaseUrl(p?.baseUrl ?? "");
 		setModelOptions(p?.models ?? []);
 		setModel("");
 	};
 
-	// 手填 baseUrl：反向匹配服务商（粘一个 DeepSeek 地址就自动跳 DeepSeek）。
+	// 手填 baseUrl：反向匹配服务商（粘一个 Anthropic 地址就自动切 Anthropic）。
 	const onBaseUrl = (v) => {
 		setBaseUrl(v);
 		const p = providerByBaseUrl(v);
-		setProvider(p !== null ? p.key : "custom");
+		if (p !== null) {
+			setProvider(p.key);
+			setApi(p.api);
+		} else {
+			setProvider("custom");
+		}
 	};
 
-	// 获取模型列表：走服务端 GET /models（用当前 baseUrl + 已填/已存的密钥）。
+	// 获取模型列表：走服务端（用当前 baseUrl + 协议 + 已填/已存的密钥）。
 	const fetchModels = () => {
 		const b = baseUrl.trim();
 		if (b === "" || !/^https?:\/\//i.test(b)) {
@@ -95,7 +107,7 @@ export function SettingsDialog({ onClose }) {
 		}
 		setFetching(true);
 		setMsg("");
-		api(API.analysisModels, { method: "POST", body: { baseUrl: b, apiKey: apiKey.trim() } })
+		api(API.analysisModels, { method: "POST", body: { baseUrl: b, apiKey: apiKey.trim(), api } })
 			.then((d) => {
 				const list = (d?.models ?? []).filter((x) => typeof x === "string" && x !== "");
 				if (list.length > 0) {
@@ -118,7 +130,7 @@ export function SettingsDialog({ onClose }) {
 		}
 		setSaving(true);
 		setMsg("");
-		saveAnalysisConfig({ baseUrl: b, apiKey: apiKey.trim(), model: m })
+		saveAnalysisConfig({ baseUrl: b, apiKey: apiKey.trim(), model: m, api })
 			.then((d) => {
 				setMaskedKey(d?.apiKey ?? "");
 				setApiKey("");
@@ -162,7 +174,7 @@ export function SettingsDialog({ onClose }) {
 				h(
 					"div",
 					{ className: "lkb-anField", style: { marginBottom: 10 } },
-					h("div", { className: "lkb-anLabel" }, "API 地址（OpenAI 兼容，可改）"),
+					h("div", { className: "lkb-anLabel" }, "API 地址（可改）"),
 					h("input", {
 						className: "lkb-input",
 						value: baseUrl,

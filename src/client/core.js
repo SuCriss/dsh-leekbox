@@ -519,7 +519,7 @@ export function ToastStack({ toasts, onDismiss }) {
 // 模型配置是「全局设置」而不是「分析页」的一部分：面板头部 ⚙️ 入口打开设置弹窗，
 // 分析页只消费「是否已配置」。这里做一份订阅式单例，让面板、设置弹窗、分析页
 // 共享同一份状态，任何一处 save/load 后其余订阅者立刻同步（模式同 toast/confirm）。
-let analysisCfg = { configured: false, baseUrl: "", model: "", maskedKey: "" };
+let analysisCfg = { configured: false, baseUrl: "", model: "", maskedKey: "", api: "openai" };
 const analysisCfgListeners = new Set();
 
 function publishAnalysisConfig(next) {
@@ -549,6 +549,7 @@ export function loadAnalysisConfig() {
 				baseUrl: d?.baseUrl ?? "",
 				model: d?.model ?? "",
 				maskedKey: d?.apiKey ?? "",
+				api: d?.api === "anthropic" ? "anthropic" : "openai",
 			})
 		)
 		.catch(() => {});
@@ -562,6 +563,7 @@ export function saveAnalysisConfig(body) {
 			baseUrl: d?.baseUrl ?? "",
 			model: d?.model ?? "",
 			maskedKey: d?.apiKey ?? "",
+			api: d?.api === "anthropic" ? "anthropic" : "openai",
 		});
 		return d;
 	});
