@@ -175,6 +175,17 @@ export function SettingsDialog({ onClose }) {
 				h(
 					"div",
 					{ className: "lkb-anField", style: { marginBottom: 10 } },
+					h("div", { className: "lkb-anLabel" }, "API 协议（切服务商自动填，也可手动改）"),
+					h(
+						"select",
+						{ className: "lkb-input", value: protocol, onChange: (e) => setProtocol(e.target.value) },
+						h("option", { value: "openai" }, "OpenAI 兼容（/chat/completions）"),
+						h("option", { value: "anthropic" }, "Anthropic 原生（/v1/messages）")
+					)
+				),
+				h(
+					"div",
+					{ className: "lkb-anField", style: { marginBottom: 10 } },
 					h("div", { className: "lkb-anLabel" }, "API 地址（可改）"),
 					h("input", {
 						className: "lkb-input",
