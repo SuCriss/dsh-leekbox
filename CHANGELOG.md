@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.14.0] - 2026-10-11
+
+### Added
+
+- **事件驱动选股扩展覆盖面**：新闻无关联股票时按热点关键词兜底——正文匹配当日涨幅靠前的概念板块名（东财），命中则取该板块涨幅前 5 的成分股作为关联股票。新增 `fetchBoardConstituents()`（emrank.js，`fs=b:BKxxxx`）；事件返回带 `via: news|board` 与 `board` 板块名；前端热点行显示板块标签 chip。限流保护：最多匹配 12 条新闻 / 6 个板块成分、行情批量 50 只；板块源不可用时安静降级为仅直接热点。
+
 ## [0.13.1] - 2026-10-11
 
 ### Changed
