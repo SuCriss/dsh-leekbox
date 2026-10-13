@@ -73,6 +73,7 @@ check("inject 为空（样式走 styles.js 自注入）", exp.inject.length === 
 		dataset: {},
 		style: {},
 		setAttribute() {},
+		removeAttribute() {},
 		appendChild() {},
 		remove() {},
 		addEventListener() {},

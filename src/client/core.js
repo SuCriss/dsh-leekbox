@@ -586,3 +586,65 @@ export function useAnalysisConfig() {
 }
 
 //#endregion
+
+//#region 主题（跟随系统 / 浅色 / 深色）
+
+//
+// 主题是纯前端偏好，持久化在 localStorage（不占服务端配置，与 AI 模型配置分开）。
+// 生效方式是切换 body 的 data-ds-dark-theme 属性——styles.js 里整套深色样式都挂在
+// 这个属性上（DSH 宿主也是用它做深色主题）。
+const THEME_KEY = "leekbox-theme";
+const themeListeners = new Set();
+let currentTheme = "system";
+
+function applyTheme(theme) {
+	if (typeof document === "undefined") return;
+	const dark =
+		theme === "dark" ||
+		(theme === "system" &&
+			typeof window !== "undefined" &&
+			window.matchMedia !== undefined &&
+			window.matchMedia("(prefers-color-scheme: dark)").matches);
+	if (dark) document.body.setAttribute("data-ds-dark-theme", "");
+	else document.body.removeAttribute("data-ds-dark-theme");
+}
+
+export function getTheme() {
+	return currentTheme;
+}
+
+export function onTheme(fn) {
+	themeListeners.add(fn);
+	return () => themeListeners.delete(fn);
+}
+
+export function setTheme(theme) {
+	currentTheme = theme === "light" || theme === "dark" ? theme : "system";
+	try {
+		localStorage.setItem(THEME_KEY, currentTheme);
+	} catch {}
+	applyTheme(currentTheme);
+	for (const fn of themeListeners) {
+		try {
+			fn(currentTheme);
+		} catch {}
+	}
+}
+
+/** 启动时读 localStorage 并应用；system 模式下监听系统主题变化。返回退订函数。 */
+export function startThemeClock() {
+	if (typeof window === "undefined") return () => {};
+	try {
+		const stored = localStorage.getItem(THEME_KEY);
+		currentTheme = stored === "light" || stored === "dark" ? stored : "system";
+	} catch {}
+	applyTheme(currentTheme);
+	const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+	const onChange = () => {
+		if (currentTheme === "system") applyTheme("system");
+	};
+	mq?.addEventListener?.("change", onChange);
+	return () => mq?.removeEventListener?.("change", onChange);
+}
+
+//#endregion

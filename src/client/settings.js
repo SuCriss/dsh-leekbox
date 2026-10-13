@@ -9,7 +9,14 @@
 // Claude 原生 Messages API（`api: anthropic`）。用「服务商下拉 + 模型下拉（可
 // 手填）+ 获取模型」。
 import { h, useEffect, useState } from "./react.js";
-import { API, api, describeError, getAnalysisConfig, saveAnalysisConfig } from "./core.js";
+import { API, api, describeError, getAnalysisConfig, getTheme, saveAnalysisConfig, setTheme } from "./core.js";
+
+/** 主题选项：跟随系统 / 浅色 / 深色。 */
+const THEME_OPTIONS = [
+	{ key: "system", label: "跟随系统" },
+	{ key: "light", label: "浅色" },
+	{ key: "dark", label: "深色" },
+];
 
 /**
  * 预设服务商。api 字段：openai = OpenAI 兼容 /chat/completions；anthropic =
@@ -34,6 +41,7 @@ function providerByBaseUrl(baseUrl) {
 }
 
 export function SettingsDialog({ onClose }) {
+	const [theme, setThemeState] = useState(getTheme());
 	const [provider, setProvider] = useState("custom");
 	// 注意：不能叫 `api`，否则会遮蔽从 core.js 导入的 api() 请求函数。
 	const [protocol, setProtocol] = useState("openai");
@@ -162,6 +170,33 @@ export function SettingsDialog({ onClose }) {
 			h(
 				"div",
 				{ className: "lkb-settingsBody" },
+				h(
+					"div",
+					{ className: "lkb-settingsSection" },
+					h("div", { className: "lkb-settingsSectionTitle" }, "主题"),
+					h(
+						"div",
+						{ className: "lkb-seg", role: "radiogroup", "aria-label": "主题" },
+						THEME_OPTIONS.map((t) =>
+							h(
+								"button",
+								{
+									key: t.key,
+									type: "button",
+									className: "lkb-segBtn",
+									"data-active": theme === t.key ? "true" : "false",
+									onClick: () => {
+										setTheme(t.key);
+										setThemeState(t.key);
+									},
+								},
+								t.label
+							)
+						)
+					)
+				),
+				h("div", { className: "lkb-settingsDivider" }),
+				h("div", { className: "lkb-settingsSectionTitle" }, "AI 模型"),
 				h(
 					"div",
 					{ className: "lkb-anField", style: { marginBottom: 10 } },

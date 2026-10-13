@@ -424,6 +424,9 @@ body[data-ds-dark-theme] .lkb-anHit:hover{border-color:#6378dc66}
 .lkb-settingsHead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--dsw-alias-border-l1,#e8e9ed)}
 .lkb-settingsTitle{font-size:14px;font-weight:600}
 .lkb-settingsBody{padding:16px}
+.lkb-settingsSection{margin-bottom:12px}
+.lkb-settingsSectionTitle{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary,#1c1e26);margin-bottom:8px}
+.lkb-settingsDivider{height:1px;background:var(--dsw-alias-border-l1,#e8e9ed);margin:4px 0 12px}
 .lkb-settingsActions{display:flex;align-items:center;gap:10px;margin-top:4px}
 body[data-ds-dark-theme] .lkb_settingsMask{background:rgba(0,0,0,.5)}
 body[data-ds-dark-theme] .lkb_settingsBox{background:#3a3a3c;border-color:#ffffff14}
