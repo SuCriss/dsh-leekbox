@@ -46,6 +46,23 @@ const SCREEN_STRATEGIES_FALLBACK = [
 	{ key: "newHigh", label: "创60日新高", desc: "创60日新高+站上MA60" },
 	{ key: "strongRise", label: "强势连涨", desc: "连涨且均线多头" },
 ];
+const SCREEN_FACTOR_GROUPS_FALLBACK = [
+	{ key: "price", label: "价格位置", items: ["aboveMa5", "aboveMa10", "aboveMa20", "aboveMa60", "aboveMa120", "nearMa20"] },
+	{ key: "momentum", label: "动量指标", items: ["rsiOversold30", "rsiOverbought70", "macdGoldenCross", "macdDeathCross", "kdjGoldenCross"] },
+	{ key: "volatility", label: "波动率", items: ["atrHigh", "atrLow", "bollSqueeze"] },
+	{ key: "volume", label: "成交量", items: ["volumeSpike", "volumeShrink", "volumeMaCross"] },
+	{ key: "pattern", label: "形态识别", items: ["bullishEngulfing", "morningStar", "longUpperShadow", "longLowerShadow", "doji"] },
+	{ key: "td", label: "TD序列", items: ["tdSetup9", "tdCountdown13"] },
+	{ key: "vwap", label: "VWAP", items: ["aboveVwap", "belowVwap"] },
+	{ key: "numeric", label: "数值因子", items: ["rsiValue", "macdHistValue", "volumeRatioValue", "atrValue", "atrPercent", "changePctValue", "turnoverRateValue", "priceAboveMa20Pct", "bollWidth"] },
+];
+const SCREEN_FACTOR_PRESETS_FALLBACK = [
+	{ key: "trend_following", label: "趋势跟踪", factors: ["aboveMa20", "aboveMa60", "macdGoldenCross", "volumeSpike"] },
+	{ key: "oversold_rebound", label: "超卖反弹", factors: ["rsiOversold30", "longLowerShadow", "morningStar"] },
+	{ key: "breakout", label: "突破形态", factors: ["bollSqueeze", "volumeSpike", "aboveMa20"] },
+	{ key: "mean_reversion", label: "均值回归", factors: ["nearMa20", "atrLow", "volumeShrink"] },
+	{ key: "momentum_strong", label: "强势动量", factors: ["rsiOverbought70", "volumeSpike", "aboveMa5", "aboveMa10", "aboveMa20"] },
+];
 /**
  * 把服务端元数据整理成面板要用的形状。
  * @param {object|null} meta GET /screener/meta 的响应；为 null 时用本地兜底
@@ -66,7 +83,37 @@ function buildScreenMeta(meta) {
 	const strategies = Array.isArray(meta?.strategies) && meta.strategies.length > 0
 		? meta.strategies.map((s) => ({ key: s.key, label: s.label, desc: s.desc }))
 		: SCREEN_STRATEGIES_FALLBACK;
-	return { signals, labelOf, groups, strategies };
+	
+	// 量化因子
+	const rawFactors = Array.isArray(meta?.factors) ? meta.factors : [];
+	const factorLabelOf = Object.fromEntries(rawFactors.map((f) => [f.key, f.label]));
+	const rawFactorGroups = Array.isArray(meta?.factorGroups) && meta.factorGroups.length > 0
+		? meta.factorGroups
+		: SCREEN_FACTOR_GROUPS_FALLBACK;
+	const factorGroups = rawFactorGroups.map((g) => ({ ...g }));
+	// 离线兜底：服务端没给 factors 时，用本地副本的 label
+	if (Object.keys(factorLabelOf).length === 0) {
+		const FALLBACK_FACTOR_LABELS = {
+			aboveMa5: "站上MA5", aboveMa10: "站上MA10", aboveMa20: "站上MA20", aboveMa60: "站上MA60", aboveMa120: "站上MA120",
+			nearMa20: "贴近MA20", rsiOversold30: "RSI超卖(<30)", rsiOverbought70: "RSI超买(>70)",
+			macdGoldenCross: "MACD金叉", macdDeathCross: "MACD死叉", kdjGoldenCross: "KDJ金叉",
+			atrHigh: "ATR偏高", atrLow: "ATR偏低", bollSqueeze: "布林收口",
+			volumeSpike: "放量(>2倍)", volumeShrink: "缩量(<0.5倍)", volumeMaCross: "量能金叉",
+			bullishEngulfing: "看涨吞没", morningStar: "早晨之星", longUpperShadow: "长上影线", longLowerShadow: "长下影线", doji: "十字星",
+			tdSetup9: "TD计数9", tdCountdown13: "TD计数13", aboveVwap: "站上VWAP", belowVwap: "跌破VWAP",
+			rsiValue: "RSI值", macdHistValue: "MACD柱", volumeRatioValue: "量比值", atrValue: "ATR值",
+			atrPercent: "ATR%", changePctValue: "涨跌幅%", turnoverRateValue: "换手率%",
+			priceAboveMa20Pct: "偏离MA20%", bollWidth: "布林带宽%",
+		};
+		for (const [k, v] of Object.entries(FALLBACK_FACTOR_LABELS)) factorLabelOf[k] = v;
+	}
+	
+	const rawFactorPresets = Array.isArray(meta?.factorPresets) && meta.factorPresets.length > 0
+		? meta.factorPresets
+		: SCREEN_FACTOR_PRESETS_FALLBACK;
+	const factorPresets = rawFactorPresets.map((p) => ({ ...p }));
+	
+	return { signals, labelOf, groups, strategies, factorGroups, factorPresets, factorLabelOf };
 }
 const NODE_CHIPS = [
 	{ v: "hs_a", label: "沪深A股" },
@@ -90,6 +137,10 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 	const [excludeST, setExcludeST] = useState(true);
 	const [require, setRequire] = useState({});
 	const [strategies, setStrategies] = useState({});
+	const [factorRequire, setFactorRequire] = useState({});
+	const [factorPresets, setFactorPresets] = useState({});
+	const [minFactorPresets, setMinFactorPresets] = useState(1);
+	const [minFactorScore, setMinFactorScore] = useState("0");
 	const [minHits, setMinHits] = useState(2);
 	const [minScore, setMinScore] = useState("0");
 	const [rows, setRows] = useState([]);
@@ -133,6 +184,8 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 	const set = (k) => (e) => setF((prev) => ({ ...prev, [k]: e.target.value }));
 	const toggleReq = (key) => () => setRequire((prev) => ({ ...prev, [key]: !prev[key] }));
 	const toggleStrat = (key) => () => setStrategies((prev) => ({ ...prev, [key]: !prev[key] }));
+	const toggleFactorReq = (key) => () => setFactorRequire((prev) => ({ ...prev, [key]: !prev[key] }));
+	const toggleFactorPreset = (key) => () => setFactorPresets((prev) => ({ ...prev, [key]: !prev[key] }));
 	const loadEvents = () => {
 		if (eventsLoading) return;
 		setEventsLoading(true);
@@ -165,6 +218,11 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 		if (mode === "multi") {
 			params.strategies = meta.strategies.filter((s) => strategies[s.key]).map((s) => s.key);
 			params.minStrategyHits = Math.max(1, Number(minHits) || 2);
+		} else if (mode === "factor") {
+			params.factorPresets = meta.factorPresets.filter((p) => factorPresets[p.key]).map((p) => p.key);
+			params.factorRequire = meta.factorGroups.flatMap((g) => g.items.filter((k) => factorRequire[k]));
+			params.minFactorPresets = Math.max(1, Number(minFactorPresets) || 1);
+			params.minFactorScore = Number(minFactorScore) || 0;
 		} else {
 			params.minScore = Number(minScore) || 0;
 			params.require = meta.signals.filter((s) => require[s.key]).map((s) => s.key);
@@ -211,7 +269,11 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 		progress && progress.total > 0
 			? Math.min(100, Math.round(((progress.done ?? 0) / progress.total) * 100))
 			: null;
-	const selCount = mode === "multi" ? Object.values(strategies).filter(Boolean).length : Object.values(require).filter(Boolean).length;
+	const selCount = mode === "multi"
+		? Object.values(strategies).filter(Boolean).length
+		: mode === "factor"
+			? Object.values(factorRequire).filter(Boolean).length + Object.values(factorPresets).filter(Boolean).length
+			: Object.values(require).filter(Boolean).length;
 	const resetAll = () => {
 		setMode("standard");
 		setNode("hs_a");
@@ -220,6 +282,10 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 		setExcludeST(true);
 		setRequire({});
 		setStrategies({});
+		setFactorRequire({});
+		setFactorPresets({});
+		setMinFactorPresets(1);
+		setMinFactorScore("0");
 		setMinHits(2);
 		setMinScore("0");
 	};
@@ -254,7 +320,9 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 						? "多策略交叉选股 —— 同时满足多个预设策略（交集）才入选，策略数越高越强势"
 						: mode === "event"
 							? "事件驱动选股 —— 从 7×24 财经快讯中提取时事热点，按热点关联受益股，点热点展开关联股票"
-							: "股票池 · 基础条件 · 技术信号 —— 实时日K计算指标，综合评分排序"
+							: mode === "factor"
+								? "量化因子选股 —— 基于多维度技术指标因子，灵活组合筛选条件"
+								: "股票池 · 基础条件 · 技术信号 —— 实时日K计算指标，综合评分排序"
 				)
 			),
 			h(
@@ -262,6 +330,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 				{ className: "lkb-seg", style: { marginLeft: 0 } },
 				h("button", { type: "button", className: "lkb-segBtn", "data-active": mode === "standard" ? "true" : "false", onClick: () => setMode("standard") }, "评分选股"),
 				h("button", { type: "button", className: "lkb-segBtn", "data-active": mode === "multi" ? "true" : "false", onClick: () => setMode("multi") }, "多策略交叉"),
+				h("button", { type: "button", className: "lkb-segBtn", "data-active": mode === "factor" ? "true" : "false", onClick: () => setMode("factor") }, "量化因子"),
 				h("button", { type: "button", className: "lkb-segBtn", "data-active": mode === "event" ? "true" : "false", onClick: () => setMode("event") }, "事件驱动")
 			),
 			selCount > 0 && mode !== "event" ? h("span", { className: "lkb-sigCount", style: { fontSize: 11.5, padding: "3px 12px" }, "data-n": "true" }, mode === "multi" ? `已选 ${selCount} 个策略` : `已选 ${selCount} 个信号`) : null
@@ -393,7 +462,67 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 							)
 						)
 					)
-				: h(
+				: mode === "factor"
+					? h(
+							"div",
+							null,
+							h(
+								"div",
+								{ className: "lkb-condBlock" },
+								h("div", { className: "lkb-scFieldLabel" }, "预设组合（勾选参与交叉，个股需命中其中若干个组合的全部因子）"),
+								h(
+									"div",
+									{ className: "lkb-sigGroups" },
+									meta.factorPresets.map((p) => {
+										const on = factorPresets[p.key] === true;
+										return h(
+											"button",
+											{ key: p.key, type: "button", className: "lkb-chip2", "data-on": on ? "true" : "false", onClick: toggleFactorPreset(p.key), title: p.factors.map((f) => meta.factorLabelOf[f] ?? f).join(" + "), style: { flexDirection: "column", alignItems: "flex-start", gap: 2, padding: "7px 11px" } },
+											h("span", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 } }, h("span", { className: "lkb-chip2Dot" }), p.label),
+											h("span", { style: { fontSize: 10.5, color: "#868e96", fontWeight: 400 } }, p.factors.map((f) => meta.factorLabelOf[f] ?? f).join(" + "))
+										);
+									})
+								),
+								h(
+									"div",
+									{ className: "lkb-scRow", style: { gap: 12, alignItems: "center" } },
+									h(
+										"div",
+										{ className: "lkb-condBlock" },
+										h("div", { className: "lkb-scFieldLabel" }, "至少命中组合数"),
+										h(
+											"div",
+											{ className: "lkb-rangeGroup" },
+											h(
+												"select",
+												{ className: "lkb-input lkb-scSelect", value: String(minFactorPresets), onChange: (e) => setMinFactorPresets(Number(e.target.value)) },
+												[1, 2, 3, 4, 5].map((n) => h("option", { value: String(n), key: n }, `${n} 个组合`))
+											)
+										)
+									)
+								)
+							),
+							h("div", { className: "lkb-scDivider" }),
+							h(
+								"div",
+								{ className: "lkb-condBlock" },
+								h("div", { className: "lkb-scFieldLabel" }, "量化因子（勾选 = 必须满足，全部命中因子参与评分）"),
+								h(
+									"div",
+									{ className: "lkb-sigGroups" },
+									meta.factorGroups.map((g) => {
+										const n = g.items.filter((k) => factorRequire[k]).length;
+										return h(
+											"div",
+											{ className: "lkb-sigGroup", key: g.key },
+											h("div", { className: "lkb-sigGroupTitle" }, g.label, h("span", { className: "lkb-sigCount", "data-n": n > 0 ? "true" : "false" }, `${n}/${g.items.length}`)),
+											h("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } }, g.items.map((k) => h("button", { key: k, type: "button", className: "lkb-chip2", "data-on": factorRequire[k] ? "true" : "false", onClick: toggleFactorReq(k) }, h("span", { className: "lkb-chip2Dot" }), meta.factorLabelOf[k] ?? k)))
+										);
+									})
+								)
+							)
+						)
+					: h(
 						"div",
 						{ className: "lkb-condBlock" },
 						h("div", { className: "lkb-scFieldLabel" }, "技术信号（勾选 = 必须满足，全部参与加权评分）"),
@@ -419,8 +548,15 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 				mode === "standard"
 					? h("div", { className: "lkb-rangeGroup" }, h("span", { className: "lkb-unit" }, "综合评分 ≥"), h("input", { className: "lkb-input lkb-scoreInput", value: minScore, onChange: (e) => setMinScore(e.target.value) }))
 					: null,
+				mode === "factor"
+					? h("div", { className: "lkb-rangeGroup" }, h("span", { className: "lkb-unit" }, "因子得分 ≥"), h("input", { className: "lkb-input lkb-scoreInput", value: minFactorScore, onChange: (e) => setMinFactorScore(e.target.value) }))
+					: null,
 				h("button", { className: "lkb-runBtn", disabled: running, onClick: run }, running ? "扫描中…" : "开始选股 ▸"),
-				h("span", { className: "lkb-status", style: { marginLeft: "auto" } }, mode === "multi" ? "基于日K实时命中 MACD / 均线 / 布林 / 量能 / 超卖等多策略" : "基于日K实时计算 MACD / KDJ / RSI / 均线 / 布林")
+				h("span", { className: "lkb-status", style: { marginLeft: "auto" } }, mode === "multi"
+					? "基于日K实时命中 MACD / 均线 / 布林 / 量能 / 超卖等多策略"
+					: mode === "factor"
+						? "基于日K实时计算 RSI / MACD / KDJ / ATR / VWAP / TD / 形态等因子"
+						: "基于日K实时计算 MACD / KDJ / RSI / 均线 / 布林")
 			),
 			running && progress
 				? h(
@@ -448,7 +584,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 					h(
 						"div",
 						{ className: "lkb-resSummary" },
-						h("span", null, mode === "multi" ? `共 ${rows.length} 只匹配 · 按命中策略数排序` : `共 ${rows.length} 只匹配 · 按综合评分排序`),
+						h("span", null, mode === "multi" ? `共 ${rows.length} 只匹配 · 按命中策略数排序` : mode === "factor" ? `共 ${rows.length} 只匹配 · 按因子得分排序` : `共 ${rows.length} 只匹配 · 按综合评分排序`),
 						h("span", { className: "lkb-status" }, "首批扫描较慢 · 结果有缓存")
 					),
 					h(
@@ -462,12 +598,12 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 								null,
 								h("th", null, "#"),
 								h("th", null, "名称"),
-								mode === "multi" ? h("th", null, "命中") : h("th", null, "评分"),
+								mode === "multi" ? h("th", null, "命中") : mode === "factor" ? h("th", null, "因子") : h("th", null, "评分"),
 								h("th", null, "现价"),
 								h("th", null, "涨跌幅"),
 								h("th", null, "换手"),
 								h("th", null, "量比"),
-								h("th", null, mode === "multi" ? "命中的策略" : "信号"),
+								h("th", null, mode === "multi" ? "命中的策略" : mode === "factor" ? "命中的因子" : "信号"),
 								h("th", null, "")
 							)
 						),
@@ -493,8 +629,8 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 										h(
 											"span",
 											{ className: "lkb-signalTags" },
-											(mode === "multi" ? r.strategies ?? [] : r.signals ?? []).slice(0, 3).map((t) => h("span", { className: "lkb-signalTag", key: t }, t)),
-											(mode === "multi" ? r.strategies ?? [] : r.signals ?? []).length > 3 ? h("span", { className: "lkb-signalMore", key: "__more" }, `+${(mode === "multi" ? r.strategies ?? [] : r.signals ?? []).length - 3}`) : null
+											(mode === "multi" ? r.strategies ?? [] : mode === "factor" ? r.factors ?? [] : r.signals ?? []).slice(0, 3).map((t) => h("span", { className: "lkb-signalTag", key: t }, meta.factorLabelOf[t] || t)),
+											(mode === "multi" ? r.strategies ?? [] : mode === "factor" ? r.factors ?? [] : r.signals ?? []).length > 3 ? h("span", { className: "lkb-signalMore", key: "__more" }, `+${(mode === "multi" ? r.strategies ?? [] : mode === "factor" ? r.factors ?? [] : r.signals ?? []).length - 3}`) : null
 										)
 									),
 									h("td", null, h(StarButton, { code: r.code, name: r.name, on: isWatched(watchSet, r.code), confirmText: `确定将 ${r.name}（${r.code}）移出自选吗？` }))
