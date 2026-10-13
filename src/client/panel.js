@@ -97,9 +97,13 @@ export function LeekBoxPanel({ onClose }) {
 	const [watchBump, setWatchBump] = useState(0);
 	const [pos, setPos] = useState(null);
 	const cardRef = useRef(null);
-	const zSeq = useRef(10);
 	const winsRef = useRef([]);
 	winsRef.current = wins;
+	// 详情弹窗的 z 必须高于主面板卡片(.lkb_card 的 z-index:10000)，否则 K线详情窗
+	// 会落在面板之下被挡住。这里从 10000 起算，openStock/focusWin 内会先 +1，所以
+	// 详情窗首帧即为 10001，永远浮在卡片之上；同时仍低于确认遮罩(2147483646)与
+	// toast(2147483647)，不破坏它们的置顶层级。
+	const zSeq = useRef(10000);
 	const onHeadPointerDown = (e) => {
 		if (e.button !== 0) return;
 		if (e.target.closest("button") !== null) return; // let buttons work normally
@@ -123,6 +127,13 @@ export function LeekBoxPanel({ onClose }) {
 		window.addEventListener("pointerup", onUp);
 	};
 	const resetPos = () => setPos(null);
+	// z 上限：必须低于确认遮罩(2147483646)与 toast(2147483647)的置顶层，给它们
+	// 各留一档余量，避免长期开大量窗口后 z 溢出到这两层之上。
+	const Z_MAX = 2147483644;
+	const bumpZ = () => {
+		if (zSeq.current < Z_MAX) zSeq.current += 1;
+		return zSeq.current;
+	};
 	const openStock = useCallback((rawCode, rawName) => {
 		const code = normCode(rawCode ?? "");
 		if (!/^(sh|sz|bj)\d{6}$/.test(code)) return;
@@ -132,7 +143,7 @@ export function LeekBoxPanel({ onClose }) {
 		const isIndex = /^(sh000|sz399|sh899|bj899)/.test(code);
 		setWins((prev) => {
 			const exist = prev.find((w) => w.code === code);
-			zSeq.current += 1;
+			const z = bumpZ();
 			if (exist) return prev.map((w) => (w.id === exist.id ? { ...w, z: zSeq.current } : w));
 			const k = prev.length % 6;
 			const wx = Math.max(8, Math.round((window.innerWidth - 760) / 2)) + k * 28;
@@ -146,15 +157,14 @@ export function LeekBoxPanel({ onClose }) {
 					isIndex,
 					x: wx,
 					y: wy,
-					z: zSeq.current,
+					z: z,
 				},
 			];
 		});
 	}, []);
 	const focusWin = (id) =>
 		setWins((prev) => {
-			zSeq.current += 1;
-			const zz = zSeq.current;
+			const zz = bumpZ();
 			return prev.map((w) => (w.id === id ? { ...w, z: zz } : w));
 		});
 	const closeWin = (id) => setWins((prev) => prev.filter((w) => w.id !== id));
