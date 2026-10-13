@@ -1,6 +1,6 @@
 // 韭菜盒子 LeekBox — 客户端 bundle 源码：API 通道 + 格式化 + 通用 hooks
 // 由 build.mjs 打包进 lib/client.js（npm run build）；不要手改产物。
-import { h, useCallback, useEffect, useRef } from "./react.js";
+import { h, useCallback, useEffect, useRef, useState } from "./react.js";
 
 export const API = {
 	indices: "/api/leekbox/indices",
@@ -508,6 +508,69 @@ export function ToastStack({ toasts, onDismiss }) {
 			h("div", { key: t.id, className: "lkb-toast", title: "点击关闭", onClick: () => onDismiss(t.id) }, t.msg)
 		)
 	);
+}
+
+//#endregion
+
+//#region AI 模型配置（全局单例）
+
+//
+// 模型配置是「全局设置」而不是「分析页」的一部分：面板头部 ⚙️ 入口打开设置弹窗，
+// 分析页只消费「是否已配置」。这里做一份订阅式单例，让面板、设置弹窗、分析页
+// 共享同一份状态，任何一处 save/load 后其余订阅者立刻同步（模式同 toast/confirm）。
+let analysisCfg = { configured: false, baseUrl: "", model: "", maskedKey: "" };
+const analysisCfgListeners = new Set();
+
+function publishAnalysisConfig(next) {
+	analysisCfg = next;
+	for (const fn of analysisCfgListeners) {
+		try {
+			fn(analysisCfg);
+		} catch {}
+	}
+}
+
+export function getAnalysisConfig() {
+	return analysisCfg;
+}
+
+export function onAnalysisConfig(fn) {
+	analysisCfgListeners.add(fn);
+	return () => analysisCfgListeners.delete(fn);
+}
+
+/** 拉取服务端配置并广播（密钥只回脱敏值）。失败保持原状态，静默。 */
+export function loadAnalysisConfig() {
+	return api(API.analysisConfig)
+		.then((d) =>
+			publishAnalysisConfig({
+				configured: d?.configured === true,
+				baseUrl: d?.baseUrl ?? "",
+				model: d?.model ?? "",
+				maskedKey: d?.apiKey ?? "",
+			})
+		)
+		.catch(() => {});
+}
+
+/** 保存配置并广播结果；返回 Promise<响应体>（含脱敏密钥）。 */
+export function saveAnalysisConfig(body) {
+	return api(API.analysisConfig, { method: "POST", body }).then((d) => {
+		publishAnalysisConfig({
+			configured: d?.configured === true,
+			baseUrl: d?.baseUrl ?? "",
+			model: d?.model ?? "",
+			maskedKey: d?.apiKey ?? "",
+		});
+		return d;
+	});
+}
+
+/** 订阅全局配置的 hook：配置变化时自动重渲染。 */
+export function useAnalysisConfig() {
+	const [cfg, setCfg] = useState(analysisCfg);
+	useEffect(() => onAnalysisConfig(setCfg), []);
+	return cfg;
 }
 
 //#endregion

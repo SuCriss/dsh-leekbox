@@ -12,7 +12,7 @@ Click the 🥬 entry in the DSH sidebar to open the dashboard.
 | ⭐ 自选 | Persistent watchlist with realtime quotes (`$DSH_HOME/.leekbox-watchlist.json`), grouped; **position cost & live P/L** (click the qty/cost cells to edit inline; live floating P/L + return % + a summary bar), **price alerts** (🔔 per-row button: price above/below, % move thresholds; watched during trading hours, toast + desktop notification + beep on trigger, then auto-removed; persisted in `$DSH_HOME/.leekbox-alerts.json`); one-click JSON backup / CSV export (position fields included), import from JSON/CSV/text (merge or replace) |
 | 🔍 选股 | Multi-signal screener over the whole market: pool + basic filters + technical signals, weighted score ranking |
 | 📰 快讯 | 7x24 news aggregated from Sina, Eastmoney and Jin10, filterable by source; important items highlighted in red |
-| 🤖 分析 | **AI stock analysis**: configure an OpenAI-compatible model (base URL / model name / key; persisted in `$DSH_HOME/.leekbox-analysis.json`, key stored server-side and shown masked only), pick a stock and have the server summarize its live quote + last 60 daily bars + F10 fundamentals into a structured Chinese analysis (with risk + disclaimer) |
+| 🤖 分析 | **AI stock analysis**: pick a stock and have the server summarize its live quote + last 60 daily bars + F10 fundamentals into a structured Chinese analysis (with risk + disclaimer; copy / regenerate supported). The model is configured in the panel header ⚙️ **global settings** (OpenAI-compatible endpoint; persisted in `$DSH_HOME/.leekbox-analysis.json`, key stored server-side and shown masked only) |
 
 The market tab opens with a sentiment thermometer: limit-up / limit-down /
 broken-board counts, whole-market up/down breadth, a consecutive-board ladder

@@ -1,25 +1,15 @@
 // 韭菜盒子 LeekBox — 客户端 bundle 源码：AI 个股分析页
 // 由 build.mjs 打包进 lib/client.js（npm run build）；不要手改产物。
 //
-// 上半部分是模型配置（API 地址 / 密钥 / 模型名，存服务端，密钥只显示脱敏值），
-// 下半部分是选股 + 分析：搜到个股后由服务端汇总行情/K线/财报并调模型生成结论。
+// 模型配置已拆到「全局设置」（面板头部 ⚙️ → settings.js，走 core.js 的全局单例），
+// 本页只负责选股 + 调服务端分析。未配置时把「开始分析」换成「去配置模型」入口。
 import { h, useCallback, useEffect, useRef, useState } from "./react.js";
 import { API, api, describeError, fmt, fmtPct, normCode, trend } from "./core.js";
 
 /** 搜索去抖：用户停下 350ms 后才发请求，避免每敲一个键都打一次上游。 */
 const SEARCH_DEBOUNCE_MS = 350;
 
-export function AnalysisTab({ onOpen }) {
-	// ---- 模型配置 ----
-	const [baseUrl, setBaseUrl] = useState("");
-	const [apiKey, setApiKey] = useState("");
-	const [model, setModel] = useState("");
-	const [maskedKey, setMaskedKey] = useState("");
-	const [configured, setConfigured] = useState(false);
-	const [saving, setSaving] = useState(false);
-	const [cfgMsg, setCfgMsg] = useState("");
-
-	// ---- 个股分析 ----
+export function AnalysisTab({ onOpen, configured, onOpenSettings }) {
 	const [kw, setKw] = useState("");
 	const [hits, setHits] = useState([]);
 	const [searching, setSearching] = useState(false);
@@ -33,18 +23,6 @@ export function AnalysisTab({ onOpen }) {
 
 	const searchSeq = useRef(0);
 	const boxRef = useRef(null);
-
-	// 载入已存配置（密钥只回脱敏值）。
-	useEffect(() => {
-		api(API.analysisConfig)
-			.then((d) => {
-				setBaseUrl(d?.baseUrl ?? "");
-				setModel(d?.model ?? "");
-				setMaskedKey(d?.apiKey ?? "");
-				setConfigured(d?.configured === true);
-			})
-			.catch(() => {});
-	}, []);
 
 	// 点搜索框外收起下拉。
 	useEffect(() => {
@@ -83,26 +61,6 @@ export function AnalysisTab({ onOpen }) {
 		}, SEARCH_DEBOUNCE_MS);
 		return () => clearTimeout(timer);
 	}, [kw]);
-
-	const save = useCallback(() => {
-		const b = baseUrl.trim();
-		const m = model.trim();
-		if (b === "" || m === "") {
-			setCfgMsg("API 地址与模型名不能为空");
-			return;
-		}
-		setSaving(true);
-		setCfgMsg("");
-		api(API.analysisConfig, { method: "POST", body: { baseUrl: b, apiKey: apiKey.trim(), model: m } })
-			.then((d) => {
-				setMaskedKey(d?.apiKey ?? "");
-				setConfigured(d?.configured === true);
-				setApiKey("");
-				setCfgMsg(d?.written === false ? "保存失败：配置未能写入，请重试" : "已保存");
-			})
-			.catch((e) => setCfgMsg(describeError(e)))
-			.finally(() => setSaving(false));
-	}, [baseUrl, apiKey, model]);
 
 	const pick = (s) => {
 		setPicked({ code: normCode(s.code), name: s.name, price: s.price, changePct: s.changePct });
@@ -157,67 +115,6 @@ export function AnalysisTab({ onOpen }) {
 	return h(
 		"div",
 		null,
-		// ---- 模型配置 ----
-		h(
-			"div",
-			{ className: "lkb-anCard" },
-			h("div", { className: "lkb-anTitle" }, "🔌 模型配置"),
-			h(
-				"div",
-				{ className: "lkb-status", style: { marginBottom: 8 } },
-				configured
-					? h("span", null, `已配置 · ${baseUrl} · ${model}${maskedKey !== "" ? " · 密钥 " + maskedKey : ""}`)
-					: h("span", null, "尚未配置模型，请填写 OpenAI 兼容接口的地址与模型名")
-			),
-			h(
-				"div",
-				{ className: "lkb-anFieldRow" },
-				h(
-					"div",
-					{ className: "lkb-anField" },
-					h("div", { className: "lkb-anLabel" }, "API 地址（OpenAI 兼容，如 https://api.openai.com/v1）"),
-					h("input", {
-						className: "lkb-input",
-						value: baseUrl,
-						onInput: (e) => setBaseUrl(e.target.value),
-						placeholder: "https://api.openai.com/v1",
-						spellcheck: "false",
-					})
-				),
-				h(
-					"div",
-					{ className: "lkb-anField" },
-					h("div", { className: "lkb-anLabel" }, "模型名（如 gpt-4o-mini / deepseek-chat）"),
-					h("input", {
-						className: "lkb-input",
-						value: model,
-						onInput: (e) => setModel(e.target.value),
-						placeholder: "gpt-4o-mini",
-						spellcheck: "false",
-					})
-				),
-				h(
-					"div",
-					{ className: "lkb-anField" },
-					h("div", { className: "lkb-anLabel" }, "API 密钥（留空则不修改已存密钥）"),
-					h("input", {
-						className: "lkb-input",
-						type: "password",
-						value: apiKey,
-						onInput: (e) => setApiKey(e.target.value),
-						placeholder: maskedKey !== "" ? "已设置（留空保持不变）" : "sk-…",
-						autocomplete: "off",
-					})
-				)
-			),
-			h(
-				"div",
-				{ className: "lkb-scActions", style: { marginTop: 4 } },
-				h("button", { className: "lkb-btn", onClick: save, disabled: saving }, saving ? "保存中…" : "保存配置"),
-				cfgMsg === "" ? null : h("span", { className: "lkb-status", style: { marginLeft: 10 } }, cfgMsg)
-			)
-		),
-		// ---- 个股分析 ----
 		h(
 			"div",
 			{ className: "lkb-anCard" },
@@ -267,9 +164,10 @@ export function AnalysisTab({ onOpen }) {
 						: null,
 					h("span", { style: { flex: 1 } }),
 					h("button", { className: "lkb-btnGhost", onClick: () => onOpen(picked.code, picked.name) }, "打开详情"),
-					h("button", { className: "lkb-btn", onClick: run, disabled: analyzing || !configured }, analyzing ? "分析中…" : "开始分析")
+					configured
+						? h("button", { className: "lkb-btn", onClick: run, disabled: analyzing }, analyzing ? "分析中…" : "开始分析")
+						: h("button", { className: "lkb-btn", onClick: onOpenSettings }, "去配置模型")
 				),
-			!configured && picked !== null ? h("div", { className: "lkb-status", style: { marginTop: 6 } }, "请先在上方保存模型配置") : null,
 			error === "" ? null : h("div", { className: "lkb-error", style: { marginTop: 10 } }, error),
 			analysis === ""
 				? null

@@ -1,13 +1,14 @@
 // 韭菜盒子 LeekBox — 客户端 bundle 源码：主面板（标签页 + 弹窗管理 + 拖拽 + 预警 toast）
 // 由 build.mjs 打包进 lib/client.js（npm run build）；不要手改产物。
 import { createRoot, h, useCallback, useEffect, useRef, useState } from "./react.js";
-import { API, api, closeConfirm, ConfirmDialog, confirmListeners, marketOpenLabel, normCode, onToast, ToastStack } from "./core.js";
+import { API, api, closeConfirm, ConfirmDialog, confirmListeners, loadAnalysisConfig, marketOpenLabel, normCode, onToast, ToastStack, useAnalysisConfig } from "./core.js";
 import { IndicesTab } from "./indices-tab.js";
 import { MarketTab } from "./market-tab.js";
 import { WatchlistTab } from "./watchlist-tab.js";
 import { ScreenerTab } from "./screener-tab.js";
 import { NewsTab } from "./news-tab.js";
 import { AnalysisTab } from "./analysis-tab.js";
+import { SettingsDialog } from "./settings.js";
 import { StockDetailWindow } from "./detail.js";
 
 const TABS = [
@@ -103,6 +104,12 @@ export function LeekBoxPanel({ onClose }) {
 	const [watchCodes, setWatchCodes] = useState([]);
 	const [watchBump, setWatchBump] = useState(0);
 	const [pos, setPos] = useState(null);
+	const [settingsOpen, setSettingsOpen] = useState(false);
+	// 全局 AI 模型配置（订阅式单例）：面板挂载时拉一次，设置弹窗/分析页共享。
+	const analysisCfg = useAnalysisConfig();
+	useEffect(() => {
+		loadAnalysisConfig();
+	}, []);
 	const cardRef = useRef(null);
 	const winsRef = useRef([]);
 	winsRef.current = wins;
@@ -275,7 +282,7 @@ export function LeekBoxPanel({ onClose }) {
 					: tab === "screener"
 						? h(ScreenerTab, { onOpen: openStock, watchCodes })
 						: tab === "analysis"
-							? h(AnalysisTab, { onOpen: openStock })
+							? h(AnalysisTab, { onOpen: openStock, configured: analysisCfg.configured, onOpenSettings: () => setSettingsOpen(true) })
 							: h(NewsTab, { onOpen: openStock });
 	return h(
 		"div",
@@ -302,6 +309,7 @@ export function LeekBoxPanel({ onClose }) {
 					"div",
 					{ className: "lkb_headRight" },
 					h("span", { className: "lkb_mktStatus", "data-open": mkt.open ? "true" : "false" }, mkt.label),
+					h("button", { className: "lkb_settingsBtn", title: "全局设置", onClick: () => setSettingsOpen(true) }, "⚙️"),
 					h("button", { className: "lkb_close", title: "关闭", onClick: onClose }, "✕")
 				)
 			),
@@ -362,6 +370,7 @@ export function LeekBoxPanel({ onClose }) {
 				onWatched: bumpWatch,
 			})
 		),
+		settingsOpen ? h(SettingsDialog, { onClose: () => setSettingsOpen(false) }) : null,
 		confirmReq === null ? null : h(ConfirmDialog, { text: confirmReq.text }),
 		h(ToastStack, { toasts, onDismiss: dismissToast })
 	);

@@ -21,6 +21,8 @@ const CSS = `
 .lkb_mktStatus[data-open="false"]{background:#f2f3f5;color:#8a8f9c}
 .lkb_close{cursor:pointer;background:0 0;border:none;color:var(--dsw-alias-label-secondary,#8a8f9c);font-size:20px;line-height:1;padding:4px 8px;border-radius:6px}
 .lkb_close:hover{background:var(--dsw-alias-interactive-bg-hover,#f2f3f5);color:var(--dsw-alias-label-primary)}
+.lkb_settingsBtn{cursor:pointer;background:0 0;border:none;color:var(--dsw-alias-label-secondary,#8a8f9c);font-size:15px;line-height:1;padding:5px 7px;border-radius:6px}
+.lkb_settingsBtn:hover{background:var(--dsw-alias-interactive-bg-hover,#f2f3f5);color:var(--dsw-alias-label-primary)}
 /* ---- 标签栏：大盘 / 行情 / 自选 / 选股 / 快讯 ----------------------------------
  * 分段控件(segmented control)：灰底浅槽 + 选中项浮起的白药丸，和选股页的 .lkb-seg
  * 保持同一套语言。外层 .lkb_tabBar 负责留白与横向滚动(375px 窄屏放得下 5 个)。 */
@@ -414,6 +416,15 @@ body[data-ds-dark-theme] .lkb-anCard{background:#3a3a3c;border-color:#ffffff14}
 body[data-ds-dark-theme] .lkb-anResult{background:#2c2c2e;border-color:#ffffff14}
 body[data-ds-dark-theme] .lkb-anHit{background:#2c2c2e;border-color:#ffffff14}
 body[data-ds-dark-theme] .lkb-anHit:hover{border-color:#6378dc66}
+/* ---- 全局设置弹窗 ---- */
+.lkb_settingsMask{position:fixed;inset:0;z-index:30000000;background:rgba(15,17,21,.35);display:flex;align-items:center;justify-content:center;padding:16px}
+.lkb_settingsBox{width:440px;max-width:100%;max-height:90vh;overflow:auto;background:var(--dsw-alias-bg-base,#fff);border:1px solid var(--dsw-alias-border-l1,#e8e9ed);border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,.25)}
+.lkb-settingsHead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--dsw-alias-border-l1,#e8e9ed)}
+.lkb-settingsTitle{font-size:14px;font-weight:600}
+.lkb-settingsBody{padding:16px}
+.lkb-settingsActions{display:flex;align-items:center;gap:10px;margin-top:4px}
+body[data-ds-dark-theme] .lkb_settingsMask{background:rgba(0,0,0,.5)}
+body[data-ds-dark-theme] .lkb_settingsBox{background:#3a3a3c;border-color:#ffffff14}
 `;
 (function injectStyle() {
 	if (typeof document === "undefined") return;
