@@ -50,16 +50,25 @@ export function describeError(e, fallback = ERR_FALLBACK) {
 }
 
 export async function api(path, opts = {}) {
+	// 默认 120s 超时：个股分析走 LLM 最长可到 90s，其它接口远快于此。超时兜底
+	// 保证服务端异常挂起时前端不会永远停在「获取中…」。
+	const timeoutMs = opts.timeoutMs ?? 120000;
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
 	let response;
 	try {
 		response = await fetch(path, {
 			method: opts.method ?? "GET",
 			headers: opts.body === void 0 ? void 0 : { "content-type": "application/json" },
 			body: opts.body === void 0 ? void 0 : JSON.stringify(opts.body),
+			signal: controller.signal,
 		});
 	} catch (e) {
 		// fetch 自身失败（断网 / 请求被拦 / 超时中止）：浏览器给的是英文 TypeError
+		if (e?.name === "AbortError") throw new Error("请求超时，请稍后重试");
 		throw new Error(describeError(e, "网络连接失败，请检查网络后重试"));
+	} finally {
+		clearTimeout(timer);
 	}
 	let data;
 	try {

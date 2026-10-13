@@ -35,7 +35,8 @@ function providerByBaseUrl(baseUrl) {
 
 export function SettingsDialog({ onClose }) {
 	const [provider, setProvider] = useState("custom");
-	const [api, setApi] = useState("openai");
+	// 注意：不能叫 `api`，否则会遮蔽从 core.js 导入的 api() 请求函数。
+	const [protocol, setProtocol] = useState("openai");
 	const [baseUrl, setBaseUrl] = useState("");
 	const [model, setModel] = useState("");
 	const [modelOptions, setModelOptions] = useState([]);
@@ -52,7 +53,7 @@ export function SettingsDialog({ onClose }) {
 		setBaseUrl(c.baseUrl);
 		setModel(c.model);
 		setMaskedKey(c.maskedKey);
-		setApi(c.api === "anthropic" ? "anthropic" : "openai");
+		setProtocol(c.api === "anthropic" ? "anthropic" : "openai");
 		setApiKey("");
 		setMsg("");
 		if (p !== null) {
@@ -80,7 +81,7 @@ export function SettingsDialog({ onClose }) {
 	const onProvider = (key) => {
 		setProvider(key);
 		const p = PROVIDERS.find((x) => x.key === key);
-		setApi(p?.api ?? "openai");
+		setProtocol(p?.api ?? "openai");
 		setBaseUrl(p?.baseUrl ?? "");
 		setModelOptions(p?.models ?? []);
 		setModel("");
@@ -92,7 +93,7 @@ export function SettingsDialog({ onClose }) {
 		const p = providerByBaseUrl(v);
 		if (p !== null) {
 			setProvider(p.key);
-			setApi(p.api);
+			setProtocol(p.api);
 		} else {
 			setProvider("custom");
 		}
@@ -107,7 +108,7 @@ export function SettingsDialog({ onClose }) {
 		}
 		setFetching(true);
 		setMsg("");
-		api(API.analysisModels, { method: "POST", body: { baseUrl: b, apiKey: apiKey.trim(), api } })
+		api(API.analysisModels, { method: "POST", body: { baseUrl: b, apiKey: apiKey.trim(), api: protocol } })
 			.then((d) => {
 				const list = (d?.models ?? []).filter((x) => typeof x === "string" && x !== "");
 				if (list.length > 0) {
@@ -130,7 +131,7 @@ export function SettingsDialog({ onClose }) {
 		}
 		setSaving(true);
 		setMsg("");
-		saveAnalysisConfig({ baseUrl: b, apiKey: apiKey.trim(), model: m, api })
+		saveAnalysisConfig({ baseUrl: b, apiKey: apiKey.trim(), model: m, api: protocol })
 			.then((d) => {
 				setMaskedKey(d?.apiKey ?? "");
 				setApiKey("");
