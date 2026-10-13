@@ -12,6 +12,7 @@ Click the 🥬 entry in the DSH sidebar to open the dashboard.
 | ⭐ 自选 | Persistent watchlist with realtime quotes (`$DSH_HOME/.leekbox-watchlist.json`), grouped; **position cost & live P/L** (click the qty/cost cells to edit inline; live floating P/L + return % + a summary bar), **price alerts** (🔔 per-row button: price above/below, % move thresholds; watched during trading hours, toast + desktop notification + beep on trigger, then auto-removed; persisted in `$DSH_HOME/.leekbox-alerts.json`); one-click JSON backup / CSV export (position fields included), import from JSON/CSV/text (merge or replace) |
 | 🔍 选股 | Multi-signal screener over the whole market: pool + basic filters + technical signals, weighted score ranking |
 | 📰 快讯 | 7x24 news aggregated from Sina, Eastmoney and Jin10, filterable by source; important items highlighted in red |
+| 🤖 分析 | **AI stock analysis**: configure an OpenAI-compatible model (base URL / model name / key; persisted in `$DSH_HOME/.leekbox-analysis.json`, key stored server-side and shown masked only), pick a stock and have the server summarize its live quote + last 60 daily bars + F10 fundamentals into a structured Chinese analysis (with risk + disclaimer) |
 
 The market tab opens with a sentiment thermometer: limit-up / limit-down /
 broken-board counts, whole-market up/down breadth, a consecutive-board ladder
@@ -37,6 +38,7 @@ backdrop.
 - Rankings / screener universe: Sina Finance (vip.stock.finance.sina.com.cn)
 - Search suggest: Eastmoney (searchadapter.eastmoney.com)
 - News: Sina zhibo stream + Eastmoney fast news (np-listapi.eastmoney.com) + Jin10 flashes; cross-source dedup merges the same event into one item even when worded differently
+- AI analysis: model is user-configured (OpenAI-compatible endpoint, e.g. OpenAI / DeepSeek); stock data reuses the quote / K-line / F10 feeds above, and the request is proxied server-side through `/chat/completions` (key stays server-side, never sent to the browser)
 
 All requests are proxied by the plugin's host half (a cordis plugin inside the
 web profile) and served to the browser same-origin under `/api/leekbox/*`,
@@ -67,8 +69,8 @@ Refresh the page after install. Host-side changes need a DSH restart.
 
 ## Structure
 
-- `lib/index.js` — host half: `/api/leekbox/*` routes + watchlist persistence
-- `lib/client.js` — browser bundle: sidebar entry + dashboard panel (React). **Generated, do not hand-edit** — sources live in `src/client/` (14 single-responsibility files), bundled with esbuild via `npm run build` (`npm run dev` for watch mode); React is injected by the host and never bundled
+- `lib/index.js` — host half: `/api/leekbox/*` routes + watchlist persistence + AI analysis (model config persistence + `/chat/completions` proxy)
+- `lib/client.js` — browser bundle: sidebar entry + dashboard panel (React). **Generated, do not hand-edit** — sources live in `src/client/` (15 single-responsibility files), bundled with esbuild via `npm run build` (`npm run dev` for watch mode); React is injected by the host and never bundled
 - `lib/screener.js` — screener engine (indicators computed from daily K-line)
 - `cordis.patch.yml` — plugin roster registration (`dsh.bundle.patch`)
 

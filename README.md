@@ -15,6 +15,7 @@ A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 | ⭐ 自选 | 自选股实时行情（持久化在 `$DSH_HOME/.leekbox-watchlist.json`），支持分组、**持仓成本与实时盈亏**（点击持仓/成本单元格内联编辑，按现价实时计算浮动盈亏额 + 收益率 + 汇总条）、**价格预警**（🔔 行内按钮设置价格涨到/跌破、涨跌幅达到；交易时段自动盯盘，触发后 toast + 浏览器通知 + 蜂鸣并自动移除，持久化在 `$DSH_HOME/.leekbox-alerts.json`）、一键 JSON 备份 / CSV 导出（含持仓字段）、从 JSON/CSV/文本导入（合并或覆盖） |
 | 🔍 选股 | 两种模式：**评分选股**（按价格/涨跌幅/换手率筛选 + 13 项技术信号勾选 + 加权评分排序）和 **多策略交叉选股**（7 个预设策略的并行交集，个股需同时命中多个策略，按命中数排序）|
 | 📰 快讯 | 新浪 / 东财 / 金十 三源聚合 7×24 快讯，来源可筛选，重要资讯红色高亮，60 秒自动刷新，可点相关股票直达详情 |
+| 🤖 分析 | **AI 个股分析**：配置 OpenAI 兼容模型（API 地址 / 模型名 / 密钥，持久化在 `$DSH_HOME/.leekbox-analysis.json`，密钥仅服务端保存、界面只显示脱敏值），搜索选股后由服务端汇总实时行情 + 近 60 日 K 线概览 + F10 财务摘要，调模型生成结构化中文分析（含风险提示与免责声明） |
 
 行情页顶部保留**连板梯队**（2板/3板/…及最高板数），可展开涨停池列表（点击直达个股详情）。
 
@@ -27,6 +28,7 @@ A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 - 榜单 / 选股：东方财富（push2.eastmoney.com，多镜像自动回退）
 - 搜索：本地全市场索引（东方财富 push2 clist 快照，约 8 千只标的，缓存 6 小时）+ 腾讯 smartbox 全拼兜底 + 批量实时行情（qt.gtimg.cn）；索引未就绪时自动回退东方财富 searchadapter
 - 7×24 快讯：新浪财经直播流（zhibo.sina.com.cn）+ 东方财富快讯（np-listapi.eastmoney.com）+ 金十数据（jin10.com）；重要资讯 = 各源官方标记（金十星标 / 新浪焦点）+ 关键词兜底（突发/重磅/重大/紧急/超预期）；跨源自动去重——同一事件多家源措辞不同（截断/扩写/换措辞）也按归一化文本 + 10 分钟时间窗内相似度合并为一条，保留信息最全的副本
+- AI 个股分析：模型由用户自行配置（OpenAI 兼容接口，如 OpenAI / DeepSeek 等），个股数据复用上面的行情 / K线 / F10 源汇总后送入模型；调用走服务端 `/chat/completions` 代理，密钥明文只在服务端落盘、绝不下发浏览器
 
 所有数据由插件服务端（web profile 内的 cordis 插件）代理抓取并标准化，浏览器端同源调用 `/api/leekbox/*`，仅限本机 loopback 访问。数据仅供研究参考，不构成投资建议。
 
@@ -76,7 +78,7 @@ A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 
 `lib/client.js` 是**提交进仓库**的产物（宿主直接加载它，不跑构建）。CI 用"重新构建后 `git diff` 是否为空"判断产物是否过期。
 
-注意一个反直觉的点：**esbuild 构建失败时不会覆盖产物**，所以"重建后产物哈希不变"听起来像"构建成功且幂等"，实际上也可能是"构建一直在报错，产物还是上一次的旧文件"。因此除了产物新鲜度，`client-bundle-test.mjs` 还会直接检查 `src/client/*` 之间 14 个模块的**导入/导出配对**——漏掉一个 `export` 会让构建失败，而那条断言会带着文件名和符号名报错。
+注意一个反直觉的点：**esbuild 构建失败时不会覆盖产物**，所以"重建后产物哈希不变"听起来像"构建成功且幂等"，实际上也可能是"构建一直在报错，产物还是上一次的旧文件"。因此除了产物新鲜度，`client-bundle-test.mjs` 还会直接检查 `src/client/*` 之间 15 个模块的**导入/导出配对**——漏掉一个 `export` 会让构建失败，而那条断言会带着文件名和符号名报错。
 
 ## 环境要求
 
@@ -101,11 +103,11 @@ mklink /J "$DSH_HOME\profiles\web\node_modules\dsh-leekbox" "<本包路径>"
 
 ## 结构
 
-- `lib/index.js` — 服务端 cordis 插件：`/api/leekbox/*` 路由 + 自选股持久化
+- `lib/index.js` — 服务端 cordis 插件：`/api/leekbox/*` 路由 + 自选股持久化 + AI 分析（模型配置持久化与 `/chat/completions` 代理）
 - `lib/calendar.js` — 交易日历与交易时段（指数日 K 反推交易日，东八区时段判定）
 - `lib/route-cache.js` — 路由级 TTL 缓存 + 单飞 + stale-if-error + 观测统计
 - `lib/search-index.js` — 本地全市场搜索索引（代码/名称/拼音首字母毫秒匹配）
-- `lib/client.js` — 浏览器端 bundle：侧边栏入口 + 行情面板（React）。**构建产物，勿手改**——源码在 `src/client/`（14 个职责文件），`npm run build` 用 esbuild 打包生成（`npm run dev` 为 watch 模式）；react 由宿主注入，不进 bundle
+- `lib/client.js` — 浏览器端 bundle：侧边栏入口 + 行情面板（React）。**构建产物，勿手改**——源码在 `src/client/`（15 个职责文件），`npm run build` 用 esbuild 打包生成（`npm run dev` 为 watch 模式）；react 由宿主注入，不进 bundle
 - `cordis.patch.yml` — 插件行注册（`dsh.bundle.patch`）
 
 ### 选股模块

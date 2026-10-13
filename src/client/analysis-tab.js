@@ -29,6 +29,7 @@ export function AnalysisTab({ onOpen }) {
 	const [analysis, setAnalysis] = useState("");
 	const [anMeta, setAnMeta] = useState(null); // { name, model }
 	const [error, setError] = useState("");
+	const [copied, setCopied] = useState(false);
 
 	const searchSeq = useRef(0);
 	const boxRef = useRef(null);
@@ -125,6 +126,33 @@ export function AnalysisTab({ onOpen }) {
 			.catch((e) => setError(describeError(e)))
 			.finally(() => setAnalyzing(false));
 	}, [picked, analyzing]);
+
+	// 复制分析文本；clipboard API 在 localhost 下可用，非安全上下文回退到 execCommand。
+	const copy = useCallback(() => {
+		if (analysis === "") return;
+		const done = () => {
+			setCopied(true);
+			setTimeout(() => setCopied(false), 1500);
+		};
+		const fallback = () => {
+			const ta = document.createElement("textarea");
+			ta.value = analysis;
+			ta.style.position = "fixed";
+			ta.style.opacity = "0";
+			document.body.appendChild(ta);
+			ta.select();
+			try {
+				document.execCommand("copy");
+				done();
+			} catch {}
+			document.body.removeChild(ta);
+		};
+		if (navigator.clipboard && window.isSecureContext) {
+			navigator.clipboard.writeText(analysis).then(done).catch(fallback);
+		} else {
+			fallback();
+		}
+	}, [analysis]);
 
 	return h(
 		"div",
@@ -250,8 +278,10 @@ export function AnalysisTab({ onOpen }) {
 					null,
 					h(
 						"div",
-						{ className: "lkb-status", style: { marginTop: 10 } },
-						h("span", null, `个股分析 · ${anMeta?.name ?? picked.name}${anMeta?.model ? " · " + anMeta.model : ""}`)
+						{ className: "lkb-anResultBar", style: { marginTop: 10 } },
+						h("span", { className: "lkb-status", style: { flex: 1 } }, `个股分析 · ${anMeta?.name ?? picked.name}${anMeta?.model ? " · " + anMeta.model : ""}`),
+						h("button", { className: "lkb-btnGhost", onClick: copy }, copied ? "已复制" : "复制"),
+						h("button", { className: "lkb-btnGhost", onClick: run, disabled: analyzing || !configured }, analyzing ? "分析中…" : "重新生成")
 					),
 					h("div", { className: "lkb-anResult" }, analysis)
 				)
