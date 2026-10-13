@@ -7,6 +7,7 @@ import { MarketTab } from "./market-tab.js";
 import { WatchlistTab } from "./watchlist-tab.js";
 import { ScreenerTab } from "./screener-tab.js";
 import { NewsTab } from "./news-tab.js";
+import { AnalysisTab } from "./analysis-tab.js";
 import { StockDetailWindow } from "./detail.js";
 
 const TABS = [
@@ -15,6 +16,7 @@ const TABS = [
 	{ key: "watchlist", label: "自选" },
 	{ key: "screener", label: "选股" },
 	{ key: "news", label: "快讯" },
+	{ key: "analysis", label: "分析" },
 ];
 
 /** 标签图标：手写 24×24 描边路径（Lucide 风格）。
@@ -53,6 +55,11 @@ const TAB_ICONS = {
 		["path", { d: "M16 9h2.5A1.5 1.5 0 0 1 20 10.5v6a2.5 2.5 0 0 1-2.5 2.5" }],
 		["path", { d: "M7 8.5h6" }],
 		["path", { d: "M7 12.5h6" }],
+	],
+	// 分析：双星（AI 火花）
+	analysis: [
+		["path", { d: "M12 3.5l1.9 4.35 4.35 1.9-4.35 1.9L12 16l-1.9-4.35-4.35-1.9 4.35-1.9z" }],
+		["path", { d: "M18.5 15.5l.9 2.05 2.05.9-2.05.9-.9 2.05-.9-2.05-2.05-.9 2.05-.9z" }],
 	],
 };
 
@@ -267,7 +274,9 @@ export function LeekBoxPanel({ onClose }) {
 					? h(WatchlistTab, { onOpen: openStock, bump: watchBump })
 					: tab === "screener"
 						? h(ScreenerTab, { onOpen: openStock, watchCodes })
-						: h(NewsTab, { onOpen: openStock });
+						: tab === "analysis"
+							? h(AnalysisTab, { onOpen: openStock })
+							: h(NewsTab, { onOpen: openStock });
 	return h(
 		"div",
 		{

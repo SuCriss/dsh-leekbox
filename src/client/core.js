@@ -21,6 +21,8 @@ export const API = {
 	screener: "/api/leekbox/screener",
 	screenerMeta: "/api/leekbox/screener/meta",
 	screenerEvents: "/api/leekbox/screener/events",
+	analysisConfig: "/api/leekbox/analysis/config",
+	analysis: "/api/leekbox/analysis/analyze",
 };
 
 const ERR_FALLBACK = "数据获取失败，请稍后重试";
