@@ -53,7 +53,7 @@ export function SettingsDialog({ onClose }) {
 		setBaseUrl(c.baseUrl);
 		setModel(c.model);
 		setMaskedKey(c.maskedKey);
-		setProtocol(c.api === "anthropic" ? "anthropic" : "openai");
+		setProtocol(c.api === "anthropic" ? "anthropic" : c.api === "responses" ? "responses" : "openai");
 		setApiKey("");
 		setMsg("");
 		if (p !== null) {
@@ -180,6 +180,7 @@ export function SettingsDialog({ onClose }) {
 						"select",
 						{ className: "lkb-input", value: protocol, onChange: (e) => setProtocol(e.target.value) },
 						h("option", { value: "openai" }, "OpenAI 兼容（/chat/completions）"),
+						h("option", { value: "responses" }, "OpenAI Responses（/v1/responses）"),
 						h("option", { value: "anthropic" }, "Anthropic 原生（/v1/messages）")
 					)
 				),

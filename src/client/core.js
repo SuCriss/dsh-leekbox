@@ -558,7 +558,7 @@ export function loadAnalysisConfig() {
 				baseUrl: d?.baseUrl ?? "",
 				model: d?.model ?? "",
 				maskedKey: d?.apiKey ?? "",
-				api: d?.api === "anthropic" ? "anthropic" : "openai",
+				api: d?.api === "anthropic" ? "anthropic" : d?.api === "responses" ? "responses" : "openai",
 			})
 		)
 		.catch(() => {});
@@ -572,7 +572,7 @@ export function saveAnalysisConfig(body) {
 			baseUrl: d?.baseUrl ?? "",
 			model: d?.model ?? "",
 			maskedKey: d?.apiKey ?? "",
-			api: d?.api === "anthropic" ? "anthropic" : "openai",
+			api: d?.api === "anthropic" ? "anthropic" : d?.api === "responses" ? "responses" : "openai",
 		});
 		return d;
 	});
