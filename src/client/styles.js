@@ -404,6 +404,8 @@ body[data-ds-dark-theme] .lkb-loadbar{background:#3a3a3c}
 .lkb-anField{display:flex;flex-direction:column;gap:5px;min-width:0}
 .lkb-anFieldRow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
 .lkb-anFieldRow .lkb-anField{flex:1;min-width:180px}
+.lkb-anModelRow{display:flex;gap:8px;align-items:center}
+.lkb-anModelRow .lkb-input{flex:1}
 .lkb-anLabel{font-size:11.5px;color:var(--dsw-alias-label-secondary,#5f6672)}
 .lkb-anResults{display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:230px;overflow:auto}
 .lkb-anHit{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--dsw-alias-border-l1,#e8e9ed);border-radius:8px;cursor:pointer;font-size:12.5px}
