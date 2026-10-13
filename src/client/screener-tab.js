@@ -293,6 +293,7 @@ export function ScreenerTab({ onOpen, watchCodes }) {
 												{ className: "lkb-eventHead", onClick: () => setExpandedEvent(open ? null : ev.id) },
 												h("span", { className: "lkb-eventDot", "data-hot": ev.important ? "true" : "false" }),
 												h("span", { className: "lkb-eventText" }, ev.text),
+												ev.board !== null && ev.board !== void 0 ? h("span", { className: "lkb-eventBoard" }, ev.board) : null,
 												h("span", { className: "lkb-eventMeta" }, ev.source === "sina" ? "新浪" : ev.source === "em" ? "东财" : ev.source === "jin10" ? "金十" : ev.source, " · ", ev.stocks.length, " 只"),
 												h("span", { className: "lkb-eventArrow", "data-open": open ? "true" : "false" }, "▾")
 											),

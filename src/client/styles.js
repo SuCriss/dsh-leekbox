@@ -332,6 +332,8 @@ body[data-ds-dark-theme] .lkb-srcBadge{background:#6378dc38;color:#a5b4fc}
 .lkb-eventDot[data-hot="true"]{background:#e03131;box-shadow:0 0 0 3px #e0313122}
 .lkb-eventText{flex:1;font-size:12.8px;line-height:1.55;color:var(--dsw-alias-label-primary,#1c1e26);min-width:0;overflow-wrap:break-word}
 .lkb-eventMeta{flex:none;font-size:10.5px;color:var(--dsw-alias-label-tertiary,#a2a7b3);white-space:nowrap}
+.lkb-eventBoard{flex:none;font-size:10px;color:#4353a3;background:#eef2ff;border-radius:99px;padding:1px 8px;white-space:nowrap}
+body[data-ds-dark-theme] .lkb-eventBoard{color:#a5b4fc;background:#6378dc38}
 .lkb-eventArrow{flex:none;color:var(--dsw-alias-label-tertiary,#a2a7b3);font-size:12px;transition:transform .15s}
 .lkb-eventArrow[data-open="true"]{transform:rotate(180deg)}
 .lkb-eventStocks{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--dsw-alias-border-l1,#f0f1f4);padding:4px 0;animation:lkb-tabPanelIn .15s ease-out}
