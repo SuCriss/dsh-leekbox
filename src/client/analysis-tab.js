@@ -71,18 +71,67 @@ export function AnalysisTab({ onOpen, configured, onOpenSettings }) {
 		setError("");
 	};
 
-	const run = useCallback(() => {
+	const run = useCallback(async () => {
 		if (picked === null || analyzing) return;
 		setAnalyzing(true);
 		setError("");
 		setAnalysis("");
-		api(API.analysis, { method: "POST", body: { code: picked.code, name: picked.name } })
-			.then((d) => {
-				setAnalysis(d?.analysis ?? "");
-				setAnMeta({ name: d?.name ?? picked.name, model: d?.model ?? "" });
-			})
-			.catch((e) => setError(describeError(e)))
-			.finally(() => setAnalyzing(false));
+		setAnMeta(null);
+		try {
+			const response = await fetch(API.analysisStream, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ code: picked.code, name: picked.name }),
+			});
+			if (!response.ok || response.body === null) {
+				// 非流式错误（400/502 等）：读 JSON error 字段。
+				let msg = `服务返回异常（HTTP ${response.status}）`;
+				try {
+					const j = await response.json();
+					if (typeof j?.error === "string") msg = j.error;
+				} catch {}
+				throw new Error(msg);
+			}
+			const reader = response.body.getReader();
+			const decoder = new TextDecoder();
+			let buf = "";
+			let eventName = "";
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				buf += decoder.decode(value, { stream: true });
+				let idx;
+				while ((idx = buf.indexOf("\n")) >= 0) {
+					const line = buf.slice(0, idx);
+					buf = buf.slice(idx + 1);
+					const t = line.endsWith("\r") ? line.slice(0, -1) : line;
+					if (t === "") {
+						eventName = "";
+						continue;
+					}
+					if (t.startsWith("event:")) {
+						eventName = t.slice(6).trim();
+						continue;
+					}
+					if (t.startsWith("data:")) {
+						const payload = t.slice(5).trim();
+						let json = null;
+						try {
+							json = JSON.parse(payload);
+						} catch {}
+						if (json === null) continue;
+						if (eventName === "meta") setAnMeta({ name: json.name, model: json.model });
+						else if (eventName === "delta") setAnalysis((prev) => prev + (typeof json.text === "string" ? json.text : ""));
+						else if (eventName === "error") throw new Error(typeof json.error === "string" ? json.error : "分析失败，请稍后重试");
+						// done 事件无需处理
+					}
+				}
+			}
+		} catch (e) {
+			setError(describeError(e));
+		} finally {
+			setAnalyzing(false);
+		}
 	}, [picked, analyzing]);
 
 	// 复制分析文本；clipboard API 在 localhost 下可用，非安全上下文回退到 execCommand。

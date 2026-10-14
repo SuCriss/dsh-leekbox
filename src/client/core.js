@@ -23,6 +23,7 @@ export const API = {
 	screenerEvents: "/api/leekbox/screener/events",
 	analysisConfig: "/api/leekbox/analysis/config",
 	analysis: "/api/leekbox/analysis/analyze",
+	analysisStream: "/api/leekbox/analysis/analyze/stream",
 	analysisModels: "/api/leekbox/analysis/models",
 };
 
