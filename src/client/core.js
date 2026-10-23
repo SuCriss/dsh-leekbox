@@ -263,15 +263,31 @@ export function useInterval(fn, ms, deps = []) {
  * 服务端 `/api/leekbox/calendar` 下发的日级信息。
  *
  * 交易日只能从上游真实日 K 推导（节假日没有 K 线），本地算不出来，所以这里
- * 存服务端给的 `tradingDays`；拿不到时 `tradingDay: null` 表示"未知"，此时
+ * 存服务端给的 `tradingDays`；拿不到时 `tradingDays: null` 表示"未知"，此时
  * 退回"周一~周五"的启发式，绝不假装知道。
+ *
+ * ⚠️ 日线只包含**已经出现过**的交易日：今天那根要到集合竞价前后才有。所以
+ * "今天不在 tradingDays 里"有两种可能——今天休市，或者今天的日线还没出。
+ * 服务端用 `from`/`to`（日线覆盖窗口）和 `todayTrading`（对今天的单项结论）
+ * 把两者分开，客户端照同一套规则折算，不许把"还没出"当成"休市"。
  */
-let tradingCalendar = { tradingDays: null, lastTradingDay: "", nextTradingDay: "", ready: false };
+let tradingCalendar = {
+	tradingDays: null,
+	from: "", // 日线覆盖窗口左边界
+	to: "", // 日线覆盖窗口右边界（= 已发布的最新一根日线）
+	today: "", // 服务端算这份快照时的"今天"（东八区）
+	todayTrading: null, // 服务端对"今天是不是交易日"的结论；null = 还没定
+	provisional: false,
+	ready: false,
+};
 let lastCalendarAt = 0;
 const sessionListeners = new Set();
 /** 拿到真日历后的刷新间隔；没拿到则按 20s 节流重试（服务端首次构建是后台跑的）。 */
 const CALENDAR_TTL_MS = 30 * 60 * 1000;
 const CALENDAR_RETRY_MS = 20 * 1000;
+/** 今天的日线还没出时，服务端的结论半小时内随时可能翻面（盘前 → 交易中），
+ *  这时候按分钟重问，别让"盘前"一直挂到中午。 */
+const CALENDAR_PROVISIONAL_MS = 60 * 1000;
 
 /** 本地时钟的东八区墙上时间（用户在 UTC 机器上时，"现在几点"仍按北京时间算）。 */
 function cnParts(now = new Date()) {
@@ -288,10 +304,47 @@ function cnToday(now = new Date()) {
 }
 const hidden = () => typeof document !== "undefined" && document.visibilityState === "hidden";
 
+/**
+ * **纯函数**：把服务端的日级结论折算成 `classifySession` 的第三个入参。
+ *
+ * 优先级与服务端 `isTradingDay()` 一致：
+ *   1. 今天就在已发布的日线里 → 交易日；
+ *   2. 今天落在日线覆盖窗口 [from, to] 内却没有那根 → 确定休市（窗口内不可能
+ *      "还没出"）；
+ *   3. 今天在窗口右侧（今天的日线还没出）→ 用服务端对今天的单项结论
+ *      `todayTrading`；它还给出结论（null）时返回 null，退回工作日启发式。
+ *
+ * @param {{tradingDays: string[], from: string, to: string, today: string, snapshotToday: string, todayTrading: boolean|null}} input
+ *   `snapshotToday` 是服务端算这份快照时的"今天"，与本地今天不一致（跨零点）
+ *   时不能借用它的结论。
+ * @returns {boolean|null} null = 日级未知
+ */
+export function resolveDayTrading(input) {
+	const days = input?.tradingDays;
+	if (!Array.isArray(days) || days.length === 0) return null;
+	const today = input.today;
+	if (days.includes(today)) return true;
+	const from = input.from;
+	const to = input.to;
+	if (typeof from === "string" && typeof to === "string" && from !== "" && to !== "" && today >= from && today <= to) return false;
+	if (input.snapshotToday === today && typeof input.todayTrading === "boolean") return input.todayTrading;
+	return null;
+}
+
 /** 当前交易时段。标签与 core.js 的服务端 calendar.js 保持同一套口径。 */
 export function marketSession(now = new Date()) {
 	const { weekday, minutes } = cnParts(now);
-	const calendarSaysTrading = tradingCalendar.tradingDays === null ? null : tradingCalendar.tradingDays.includes(cnToday(now));
+	const today = cnToday(now);
+	const calendarSaysTrading = tradingCalendar.ready
+		? resolveDayTrading({
+				tradingDays: tradingCalendar.tradingDays,
+				from: tradingCalendar.from,
+				to: tradingCalendar.to,
+				today: today,
+				snapshotToday: tradingCalendar.today,
+				todayTrading: tradingCalendar.todayTrading,
+			})
+		: null;
 	return classifySession(weekday, minutes, calendarSaysTrading);
 }
 
@@ -359,21 +412,38 @@ function markVisible() {
  */
 export function refreshCalendar(force = false) {
 	const now = Date.now();
-	const wait = tradingCalendar.ready ? CALENDAR_TTL_MS : CALENDAR_RETRY_MS;
+	const wait = tradingCalendar.ready ? (tradingCalendar.provisional ? CALENDAR_PROVISIONAL_MS : CALENDAR_TTL_MS) : CALENDAR_RETRY_MS;
 	if (!force && now - lastCalendarAt < wait) return Promise.resolve();
 	lastCalendarAt = now;
 	return api(API.calendar)
 		.then((d) => {
 			const days = Array.isArray(d?.tradingDays) ? d.tradingDays : null;
+			const ready = days !== null && days.length > 0;
 			tradingCalendar = {
-				tradingDays: days !== null && days.length > 0 ? days : null,
-				lastTradingDay: d?.lastTradingDay ?? "",
-				nextTradingDay: d?.nextTradingDay ?? "",
-				ready: days !== null && days.length > 0,
+				tradingDays: ready ? days : null,
+				from: ready && typeof d?.from === "string" ? d.from : "",
+				to: ready && typeof d?.to === "string" ? d.to : "",
+				today: ready && typeof d?.today === "string" ? d.today : "",
+				todayTrading: typeof d?.todayTrading === "boolean" ? d.todayTrading : null,
+				provisional: d?.provisional === true || d?.session?.provisional === true,
+				ready: ready,
 			};
 			notifySession();
 		})
 		.catch(() => {});
+}
+
+/**
+ * 面板顶部"交易中/休市"那枚标签的说明文字（做 title 用）。
+ *
+ * 这条提示的用处只有一个：出问题时能一眼看出标签是"日历确认过"还是"工作日猜的"。
+ */
+export function calendarHint() {
+	if (tradingCalendar.ready !== true) return "交易日历尚未就绪：暂按周一~周五判断";
+	const today = tradingCalendar.today === "" ? "今天" : tradingCalendar.today;
+	if (tradingCalendar.provisional === true) return `${today}：今天的日线还没出，暂按工作日判断`;
+	if (tradingCalendar.todayTrading === false) return `${today}：休市（交易日历 / 分时探测确认）`;
+	return `${today}：交易日（交易日历 / 分时探测确认）`;
 }
 
 /** 面板挂载时调一次：拉日历 + 订阅"回到前台补拉"。 */

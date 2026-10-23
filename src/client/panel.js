@@ -1,7 +1,7 @@
 // 韭菜盒子 LeekBox — 客户端 bundle 源码：主面板（标签页 + 弹窗管理 + 拖拽 + 预警 toast）
 // 由 build.mjs 打包进 lib/client.js（npm run build）；不要手改产物。
 import { createRoot, h, useCallback, useEffect, useRef, useState } from "./react.js";
-import { API, api, closeConfirm, ConfirmDialog, confirmListeners, loadAnalysisConfig, marketOpenLabel, normCode, onToast, ToastStack, useAnalysisConfig } from "./core.js";
+import { API, api, calendarHint, closeConfirm, ConfirmDialog, confirmListeners, loadAnalysisConfig, marketOpenLabel, normCode, onToast, ToastStack, useAnalysisConfig, useInterval } from "./core.js";
 import { IndicesTab } from "./indices-tab.js";
 import { MarketTab } from "./market-tab.js";
 import { WatchlistTab } from "./watchlist-tab.js";
@@ -250,6 +250,12 @@ export function LeekBoxPanel({ onClose }) {
 			window.removeEventListener("leekbox:watchlist-changed", refresh);
 		};
 	}, []);
+	// 顶部"交易中/休市"这枚标签只看本地时钟，没有任何数据变化能触发它重算：
+	// 已有的 20s 自选轮询一旦失败/停摆，标签就永远停在挂载那一刻。这里单独给
+	// 一拍心跳，保证跨过 9:15 / 9:30 / 11:30 / 13:00 / 15:00 时标签能自己翻面。
+	// eslint-disable-next-line no-unused-vars
+	const [_clockTick, setClockTick] = useState(0);
+	useInterval(() => setClockTick((v) => (v + 1) % 1000000), 30 * 1000);
 	// 标签栏的键盘导航：←/→ 循环、Home/End 跳首尾。roving tabindex —— 只有选中项
 	// tabIndex=0，所以 Tab 键进得来、出去得走，不会在 5 个标签里转圈。
 	const onTabKeyDown = (e) => {
@@ -308,7 +314,7 @@ export function LeekBoxPanel({ onClose }) {
 				h(
 					"div",
 					{ className: "lkb_headRight" },
-					h("span", { className: "lkb_mktStatus", "data-open": mkt.open ? "true" : "false" }, mkt.label),
+					h("span", { className: "lkb_mktStatus", "data-open": mkt.open ? "true" : "false", title: calendarHint() }, mkt.label),
 					h("button", { className: "lkb_settingsBtn", title: "全局设置", onClick: () => setSettingsOpen(true) }, "⚙️"),
 					h("button", { className: "lkb_close", title: "关闭", onClick: onClose }, "✕")
 				)
