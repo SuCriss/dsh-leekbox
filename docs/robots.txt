@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sucriss.github.io/dsh-leekbox/sitemap.xml
