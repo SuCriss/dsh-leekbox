@@ -5,5 +5,5 @@ name: SuCriss/dsh-leekbox
 category: tools
 tarball: https://github.com/SuCriss/dsh-leekbox/releases/latest/download/dsh-leekbox.tgz
 description:
-  en: 'A-share market dashboard: realtime quotes and indices, millisecond full-market search, THS-style candlestick K-line popups, watchlist, ETF/convertible-bond/LOF boards, screener, and a 7x24 aggregated news feed.'
-  zh: '韭菜盒子：A股看盘助手——实时行情、毫秒级全市场搜索、同花顺式K线详情弹窗、自选股、ETF/可转债/LOF榜单、条件选股、7x24聚合快讯。'
+  en: 'A-share market dashboard for DeepSeek Harness (DSH): realtime quotes and indices, intraday and forward-adjusted candlestick K-line, watchlist with position P/L and price alerts, 13-signal screener, limit-up sentiment thermometer and dragon-tiger list, 7x24 multi-source news, AI stock analysis. Free public data, no API key needed.'
+  zh: '韭菜盒子：DSH 里的 A 股实时看盘面板——行情与大盘指数、分时/前复权 K 线、自选股持仓盈亏与价格预警、13 项技术信号选股、涨停情绪温度计与龙虎榜、7×24 三源聚合快讯、AI 个股分析。公开免费数据源，无需 API key。'

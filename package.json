@@ -1,16 +1,38 @@
 {
   "name": "dsh-leekbox",
   "version": "0.19.3",
-  "description": "韭菜盒子 LeekBox — A股看盘助手：实时行情、毫秒级全市场搜索（代码/名称/拼音首字母+实时价格）、大盘指数、个股详情弹窗（当日分时图·资金流向柱状图·F10财务摘要·同花顺式K线·前复权）、自选股（持仓成本+实时盈亏+价格预警）、条件选股（评分选股+多策略交叉选股）、三源聚合7x24快讯、市场情绪温度计（连板梯队/炸板率/涨跌家数）、ETF/可转债/LOF。Runs as a DSH web client plugin.",
+  "description": "韭菜盒子 LeekBox — A股看盘助手 | A-share market dashboard for DeepSeek Harness (DSH): 实时行情与指数、分时/前复权K线、自选股持仓盈亏与价格预警、13 项技术信号选股与多策略交叉选股、涨停情绪温度计与龙虎榜、7×24 三源聚合快讯、AI 个股分析。Realtime quotes, candlestick K-line, screener, watchlist, limit-up sentiment, AI stock analysis.",
   "keywords": [
     "dsh",
     "dsh-plugin",
-    "stock",
+    "deepseek",
+    "deepseek-harness",
     "a-share",
+    "stock",
+    "stock-market",
     "finance",
+    "market-data",
+    "realtime-quotes",
     "kline",
-    "watchlist"
+    "candlestick-chart",
+    "technical-analysis",
+    "screener",
+    "watchlist",
+    "limit-up",
+    "dragon-tiger-list",
+    "eastmoney",
+    "tencent-finance",
+    "quant"
   ],
+  "author": "SuCriss",
+  "homepage": "https://github.com/SuCriss/dsh-leekbox#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SuCriss/dsh-leekbox.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SuCriss/dsh-leekbox/issues"
+  },
   "type": "module",
   "main": "lib/index.js",
   "exports": {

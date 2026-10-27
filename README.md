@@ -1,12 +1,82 @@
-# 韭菜盒子 LeekBox 🥬
+# 韭菜盒子 LeekBox · A股看盘助手（DeepSeek Harness 插件）
 
+[![npm](https://img.shields.io/npm/v/dsh-leekbox?color=2f9e44&label=npm)](https://www.npmjs.com/package/dsh-leekbox)
+[![CI](https://github.com/SuCriss/dsh-leekbox/actions/workflows/ci.yml/badge.svg)](https://github.com/SuCriss/dsh-leekbox/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![platform](https://img.shields.io/badge/platform-web-1098ad)
+[![stars](https://img.shields.io/github/stars/SuCriss/dsh-leekbox?style=social)](https://github.com/SuCriss/dsh-leekbox/stargazers)
 
 [English](README.en.md) | 简体中文
 
-A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
+<img src="docs/og.png" alt="韭菜盒子 LeekBox — A股看盘助手 · DeepSeek Harness (DSH) 插件：实时行情、分时与K线、自选股盈亏与预警、技术信号选股、涨停情绪、龙虎榜、AI 分析" width="100%">
 
-在 DSH Web 界面的左侧边栏出现 🥬 入口，点击打开行情面板：
+**韭菜盒子（LeekBox）是一个 A 股实时行情看板，形态是 DeepSeek Harness（DSH）的 Web 客户端插件**：装好后 DSH 左侧边栏多出一个 🥬 入口，点开就是行情面板——实时行情与大盘指数、分时图与前复权 K 线、自选股（持仓成本 / 实时盈亏 / 价格预警）、技术信号选股、涨停情绪温度计与龙虎榜、7×24 三源聚合快讯、以及可自带模型的 AI 个股分析。全部请求由插件服务端在本机代理，浏览器同源访问 `/api/leekbox/*`，只监听 loopback。
+
+> 如果你在找「DeepSeek Harness / DSH 的 A 股插件」「开源 A 股看盘面板」「自选股 + 价格预警 + 选股器」「涨停 / 龙虎榜 / 情绪温度计」，这个仓库就是它。数据来自腾讯财经、东方财富、新浪财经、金十数据的公开接口，开箱即用、不需要任何 API key（AI 分析除外，模型密钥由你自己配置）。
+
+## 目录
+
+- [这是什么](#这是什么)
+- [功能亮点](#功能亮点)
+- [快速开始](#快速开始)
+- [六个标签页](#六个标签页)
+- [数据源](#数据源)
+- [交易时段与交易日历](#交易时段与交易日历)
+- [上游请求治理](#上游请求治理)
+- [写接口的跨站防护](#写接口的跨站防护)
+- [龙虎榜的日期语义](#龙虎榜的日期语义)
+- [出错了要说得出来](#出错了要说得出来)
+- [构建产物与源码必须一致](#构建产物与源码必须一致)
+- [环境要求](#环境要求)
+- [安装](#安装)
+- [结构](#结构)
+- [常见问题](#常见问题)
+- [相关链接](#相关链接)
+- [免责声明](#免责声明)
+
+## 这是什么
+
+一个**开源、可自托管、嵌在你自己的 AI 工作台里**的 A 股看盘工具。和同花顺 / 东方财富客户端的区别不是行情深度，而是形态：它不是一个独立 App，而是 DSH 面板里的一个标签页集群——看盘、选股、快讯、AI 分析在同一个窗口里，代码全部开放，数据链路可审计（每个上游都能在 `lib/` 里找到对应的适配器）。
+
+- **面向 A 股**：沪深京 A 股、ETF / 场内基金、可转债、LOF；不含港股、美股、期货。
+- **行情实时**：交易时段内 30~60 秒自动刷新，非交易时段不发请求（见[交易时段与交易日历](#交易时段与交易日历)）。
+- **零配置起步**：免费公开行情接口，装完就能用；只有 AI 分析需要你自己填模型密钥。
+- **纯本机**：服务端路由随 DSH 进程运行，只监听 127.0.0.1，密钥只落盘在服务端、界面只显示脱敏值。
+
+## 功能亮点
+
+- 📈 **实时行情与大盘指数** — 上证 / 深成 / 创业板 / 科创50，15 项实时指标；个股详情弹窗带当日分时图、日/周/月/5分/30分前复权 K 线（MA5/10/20 + 成交量 + 十字光标）、主力资金流向柱状图、F10 财务摘要。
+- ⭐ **自选股 + 持仓盈亏 + 价格预警** — 分组管理，按持仓成本实时计算浮动盈亏与收益率；行内设置「涨到 / 跌破 / 涨跌幅达到」阈值，交易时段自动盯盘，触发后 toast + 浏览器通知 + 蜂鸣。
+- 🔍 **选股器** — 两种模式：13 项技术信号加权评分排序，以及 7 个预设策略的并行交集（交叉选股）；信号定义集中在服务端，界面按元数据自动渲染。
+- 🌡️ **涨停情绪温度计** — 市场宽度 / 涨停强度 / 封板率 / 连板高度加权成 0~100 分，配连板梯队、炸板率、涨跌家数、涨停池明细。
+- 🐉 **龙虎榜** — 按日期回溯到最近一个已发布的交易日，不把"当天还没发布"伪装成"没有数据"。
+- 📰 **7×24 快讯** — 新浪 / 东财 / 金十三源聚合，跨源去重（同一事件措辞不同也合并），重要资讯高亮，可点相关股票直达详情。
+- 🤖 **AI 个股分析** — 服务端汇总实时行情 + 近 60 日 K 线 + F10 财务后送模型，输出结构化中文分析（含风险提示）；支持 DeepSeek / OpenAI / Anthropic Claude / Moonshot Kimi / 智谱 / 通义 等服务商。
+- 🔎 **毫秒级全市场搜索** — 约 8 千只标的的本地索引，代码 / 名称 / 拼音首字母匹配，结果卡带实时价格。
+
+## 快速开始
+
+```bash
+# 1) 拿代码
+git clone https://github.com/SuCriss/dsh-leekbox.git
+
+# 2) 链进 web profile 的 node_modules
+#    Windows
+mklink /J "%DSH_HOME%\profiles\web\node_modules\dsh-leekbox" "<仓库路径>"
+#    macOS / Linux
+ln -s "<仓库路径>" "$DSH_HOME/profiles/web/node_modules/dsh-leekbox"
+
+# 3) 在 $DSH_HOME/profiles/web/cordis.patch.yml 追加一行注册：
+#    - insert:
+#        - id: leekbox
+#          name: 'dsh-leekbox'
+
+# 4) profile watcher 约 1 秒内热重组合；刷新浏览器，侧边栏出现 🥬
+```
+
+细节与常见坑见[安装](#安装)。要求 DSH ≥ 0.1.1-rc.1、**web profile**。
+
+## 六个标签页
 
 | Tab | 功能 |
 | --- | --- |
@@ -85,6 +155,7 @@ A-share 看盘助手 —— DeepSeek Harness (DSH) Web 客户端插件。
 
 - DeepSeek Harness (DSH) **≥ 0.1.1-rc.1**（声明于 `package.json` 的 `dsh.engines.dsh`）
 - 仅运行于 **web profile**（`dsh.client.platform: "web"`）：服务端路由随宿主进程运行，浏览器端经同源 `/api/leekbox/*` 访问（仅限本机 loopback）
+- Node.js ≥ 20（仅构建产物 / 跑测试需要，宿主运行不需要单独装 node）
 
 ## 安装
 
@@ -122,6 +193,40 @@ mklink /J "$DSH_HOME\profiles\web\node_modules\dsh-leekbox" "<本包路径>"
 - `lib/screener-validate.js` — 参数归一化 + 带 `error.code` 的校验异常
 
 `GET /api/leekbox/screener/meta` 下发信号/策略元数据，前端据此渲染勾选面板，服务端加信号时界面自动跟随（客户端仅保留离线兜底副本）。
+
+## 常见问题
+
+**这是网页版还是客户端？要单独装软件吗？**
+都不是——它是 DSH（DeepSeek Harness）的插件，跑在 DSH 的 **web profile** 里：服务端路由在 DSH 进程内，界面是浏览器里的一个面板。所以"安装"= 把包放进 `$DSH_HOME/profiles/web/node_modules` + 在 `cordis.patch.yml` 注册一行。
+
+**需要付费行情 API 或注册账号吗？**
+不需要。行情、指数、K 线、榜单、龙虎榜、快讯全部来自公开免费接口（腾讯财经 / 东方财富 / 新浪财经 / 金十数据）。唯一需要你自备凭据的是 AI 个股分析里的模型密钥。
+
+**行情有多实时？**
+交易时段内按 30~60 秒轮询（各标签页不同），盘中开着的详情窗口跟着刷新；非交易时段、页面在后台时**不发请求**，回到前台立刻补一次。
+
+**支持港股、美股、期货吗？**
+不支持，只做 A 股：沪深京股票、ETF / 场内基金、可转债、LOF。
+
+**我的自选股和密钥会上传到你的服务器吗？**
+不会。所有路由只监听 `127.0.0.1`，浏览器同源访问；自选股 / 持仓 / 预警 / 模型配置都落盘在 `$DSH_HOME/.leekbox-*.json`，模型密钥只存在服务端、界面只显示脱敏值。
+
+**为什么有时右上角显示「休市」？**
+那是交易日历在说"今天不开市"——可能是周末、法定假期（含调休），也可能是当天还没开盘。日历用指数日 K 反推，配合分时探测区分"今天休市"和"今天的日线还没出"，细节见[交易时段与交易日历](#交易时段与交易日历)。
+
+**选股是怎么算的？会不会是随机推荐？**
+不是。13 项技术信号（均线、MACD、RSI、KDJ、BOLL、放量、上穿等）由日 K 现算并加权评分；多策略模式是 7 个预设策略的并行交集，个股需同时命中多个策略才入选，按命中数排序。所有信号与权重的唯一定义在 `lib/signals.js`，可审计、可改。
+
+**和同花顺 / 东方财富客户端比，差在哪？**
+差在数据深度（没有 Level-2、逐笔、财报全库）与交易下单；强在形态与开放性——嵌在你的 AI 工作台里、代码全开源、数据链路可查、可以自己改信号和权重。
+
+## 相关链接
+
+- 发布记录：[Releases](https://github.com/SuCriss/dsh-leekbox/releases)
+- 问题反馈 / 功能建议：[Issues](https://github.com/SuCriss/dsh-leekbox/issues)
+- npm 包：[dsh-leekbox](https://www.npmjs.com/package/dsh-leekbox)
+- English README：[README.en.md](README.en.md)
+- 贡献指南：[CONTRIBUTING.md](CONTRIBUTING.md) · 变更日志：[CHANGELOG.md](CHANGELOG.md)
 
 ## 免责声明
 

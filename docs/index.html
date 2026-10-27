@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>韭菜盒子 LeekBox — A股看盘助手 · DeepSeek Harness (DSH) 插件</title>
+<meta name="description" content="韭菜盒子 LeekBox 是 DeepSeek Harness（DSH）的 A 股看盘插件：实时行情与大盘指数、分时与前复权 K 线、自选股持仓盈亏与价格预警、13 项技术信号选股、涨停情绪温度计与龙虎榜、7×24 三源聚合快讯、AI 个股分析。开源、本机运行、无需 API key。">
+<meta name="keywords" content="韭菜盒子,LeekBox,A股,看盘助手,DeepSeek Harness,DSH,DSH 插件,A股插件,实时行情,K线,分时图,自选股,价格预警,持仓盈亏,选股器,技术信号,涨停,情绪温度计,龙虎榜,快讯,AI 个股分析,东方财富,腾讯财经,开源,股票看板,windows 看盘工具">
+<meta name="author" content="SuCriss">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://sucriss.github.io/dsh-leekbox/">
+<meta name="theme-color" content="#0b2318">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="韭菜盒子 LeekBox">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="韭菜盒子 LeekBox — A股看盘助手 · DeepSeek Harness 插件">
+<meta property="og:description" content="实时行情、分时与 K 线、自选股持仓盈亏与价格预警、13 项技术信号选股、涨停情绪温度计、龙虎榜、7×24 快讯、AI 个股分析。装进 DeepSeek Harness 面板里，开源、本机运行、无需 API key。">
+<meta property="og:url" content="https://sucriss.github.io/dsh-leekbox/">
+<meta property="og:image" content="https://sucriss.github.io/dsh-leekbox/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="韭菜盒子 LeekBox — A股看盘助手，DeepSeek Harness 插件">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="韭菜盒子 LeekBox — A股看盘助手 · DeepSeek Harness 插件">
+<meta name="twitter:description" content="实时行情、K 线、自选股盈亏与预警、技术信号选股、涨停情绪、龙虎榜、7×24 快讯、AI 个股分析。开源 A 股看板，装进 DSH 面板。">
+<meta name="twitter:image" content="https://sucriss.github.io/dsh-leekbox/og.png">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥬</text></svg>">
+
+<style>
+  :root {
+    --bg: #07160f;
+    --bg-soft: #0b2318;
+    --card: #0f2b1e;
+    --line: #1d4a33;
+    --text: #e6f2ea;
+    --muted: #9fb8a9;
+    --brand: #35d07f;
+    --brand-dim: #1f8f57;
+    --up: #e03131;
+    --down: #0f9d6e;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 50% -10%, #12351f 0%, var(--bg) 55%) no-repeat, var(--bg);
+    color: var(--text);
+    font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    letter-spacing: .01em;
+  }
+  a { color: var(--brand); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+  header.hero { padding: 72px 0 40px; text-align: center; }
+  .badge {
+    display: inline-block; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px;
+    color: var(--muted); font-size: 13px; background: rgba(15,43,30,.6);
+  }
+  h1 { font-size: clamp(28px, 5vw, 46px); line-height: 1.25; margin: 18px 0 10px; letter-spacing: -.01em; }
+  h1 .leaf { filter: saturate(1.1); }
+  .sub { color: var(--muted); font-size: clamp(15px, 2.2vw, 19px); max-width: 760px; margin: 0 auto; }
+  .sub strong { color: var(--text); font-weight: 600; }
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 28px 0 8px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 12px;
+    font-weight: 600; font-size: 15px; border: 1px solid var(--line); color: var(--text);
+    background: linear-gradient(180deg, rgba(53,208,127,.14), rgba(53,208,127,.04));
+    transition: transform .12s ease, border-color .12s ease, background .12s ease;
+  }
+  .btn:hover { text-decoration: none; transform: translateY(-1px); border-color: var(--brand-dim); }
+  .btn.primary { background: linear-gradient(180deg, #35d07f, #1f9f60); color: #06261a; border-color: transparent; }
+  .btn.ghost { background: transparent; border-color: var(--line); color: var(--muted); }
+  section { padding: 44px 0; }
+  h2 { font-size: clamp(20px, 3vw, 27px); margin: 0 0 6px; letter-spacing: -.01em; }
+  .lead { color: var(--muted); margin: 0 0 24px; max-width: 780px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 14px; }
+  .card {
+    border: 1px solid var(--line); border-radius: 16px; padding: 18px 18px 16px;
+    background: linear-gradient(180deg, rgba(15,43,30,.9), rgba(11,35,24,.9));
+  }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .card .ico { font-size: 20px; }
+  pre {
+    margin: 0; padding: 16px 18px; border-radius: 14px; border: 1px solid var(--line);
+    background: #06170f; overflow-x: auto; font-size: 13.5px; line-height: 1.65;
+    font-family: ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace;
+  }
+  pre .c { color: #5f7d6c; }
+  .note { color: var(--muted); font-size: 14px; margin-top: 10px; }
+  dl.faq { margin: 0; }
+  dl.faq dt { font-weight: 600; margin: 22px 0 4px; }
+  dl.faq dd { margin: 0; color: var(--muted); }
+  table.tabs { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  table.tabs th, table.tabs td { border-bottom: 1px solid var(--line); padding: 10px 8px; text-align: left; vertical-align: top; }
+  table.tabs th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  footer { border-top: 1px solid var(--line); padding: 26px 0 44px; color: var(--muted); font-size: 14px; }
+  footer .row { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "韭菜盒子 LeekBox",
+      "alternateName": "dsh-leekbox",
+      "applicationCategory": "FinanceApplication",
+      "applicationSubCategory": "A-share market dashboard",
+      "operatingSystem": "Windows, macOS, Linux (runs as a DeepSeek Harness web client plugin)",
+      "url": "https://sucriss.github.io/dsh-leekbox/",
+      "codeRepository": "https://github.com/SuCriss/dsh-leekbox",
+      "downloadUrl": "https://www.npmjs.com/package/dsh-leekbox",
+      "description": "韭菜盒子 LeekBox 是 DeepSeek Harness（DSH）的 A 股看盘插件：实时行情与大盘指数、分时与前复权 K 线、自选股持仓盈亏与价格预警、13 项技术信号选股、涨停情绪温度计与龙虎榜、7×24 三源聚合快讯、AI 个股分析。",
+      "inLanguage": ["zh-CN", "en"],
+      "license": "https://github.com/SuCriss/dsh-leekbox/blob/main/LICENSE",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
+      "author": { "@type": "Person", "name": "SuCriss", "url": "https://github.com/SuCriss" },
+      "featureList": [
+        "实时行情与大盘指数",
+        "分时图与前复权 K 线",
+        "自选股持仓盈亏与价格预警",
+        "13 项技术信号选股与多策略交叉选股",
+        "涨停情绪温度计与龙虎榜",
+        "7×24 三源聚合快讯",
+        "AI 个股分析（自带模型密钥）"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "韭菜盒子 LeekBox 是什么？",
+          "acceptedAnswer": { "@type": "Answer", "text": "一个 A 股实时行情看板，形态是 DeepSeek Harness（DSH）的 Web 客户端插件。装好后 DSH 侧边栏多出 🥬 入口，点开就是行情面板：实时行情与指数、分时与 K 线、自选股持仓盈亏与价格预警、技术信号选股、涨停情绪与龙虎榜、7×24 快讯、AI 个股分析。" }
+        },
+        {
+          "@type": "Question",
+          "name": "需要付费行情 API 或注册账号吗？",
+          "acceptedAnswer": { "@type": "Answer", "text": "不需要。行情、指数、K 线、榜单、龙虎榜、快讯全部来自公开免费接口（腾讯财经、东方财富、新浪财经、金十数据）。唯一需要自备凭据的是 AI 个股分析里的模型密钥。" }
+        },
+        {
+          "@type": "Question",
+          "name": "行情有多实时？",
+          "acceptedAnswer": { "@type": "Answer", "text": "交易时段内按 30~60 秒轮询，盘中打开的详情窗口跟着刷新；非交易时段与页面在后台时不发请求，回到前台立刻补一次。" }
+        },
+        {
+          "@type": "Question",
+          "name": "支持港股、美股或期货吗？",
+          "acceptedAnswer": { "@type": "Answer", "text": "不支持。只做 A 股：沪深京股票、ETF 与场内基金、可转债、LOF。" }
+        },
+        {
+          "@type": "Question",
+          "name": "自选股和模型密钥会上传吗？",
+          "acceptedAnswer": { "@type": "Answer", "text": "不会。服务端路由只监听 127.0.0.1，浏览器同源访问；自选股、持仓、预警与模型配置落盘在 $DSH_HOME/.leekbox-*.json，模型密钥只存在服务端、界面只显示脱敏值。" }
+        },
+        {
+          "@type": "Question",
+          "name": "怎么安装？",
+          "acceptedAnswer": { "@type": "Answer", "text": "把仓库链接到 $DSH_HOME/profiles/web/node_modules/dsh-leekbox，然后在 $DSH_HOME/profiles/web/cordis.patch.yml 追加一行 insert: id leekbox / name dsh-leekbox，profile watcher 约 1 秒内热重组合，刷新浏览器即出现侧边栏入口。" }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="badge">DeepSeek Harness 插件 · 开源 MIT · 本机运行</span>
+    <h1><span class="leaf">🥬</span> 韭菜盒子 LeekBox</h1>
+    <p class="sub">
+      <strong>A 股看盘助手</strong>，装进 DeepSeek Harness（DSH）的 Web 面板里：
+      实时行情与大盘指数、分时与前复权 K 线、自选股持仓盈亏与价格预警、
+      13 项技术信号选股、涨停情绪温度计与龙虎榜、7×24 三源聚合快讯、AI 个股分析。
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/SuCriss/dsh-leekbox">GitHub 仓库 ★</a>
+      <a class="btn" href="https://www.npmjs.com/package/dsh-leekbox">npm 安装</a>
+      <a class="btn ghost" href="https://github.com/SuCriss/dsh-leekbox/releases">更新日志</a>
+    </div>
+    <p class="note">公开免费数据源，无需 API key · 只监听 127.0.0.1 · 数据仅供研究，不构成投资建议</p>
+  </header>
+
+  <section>
+    <h2>为什么是插件，而不是又一个看盘 App</h2>
+    <p class="lead">
+      行情软件不缺，缺的是"待在你自己工作台里的那一个"。LeekBox 把看盘、选股、快讯和 AI 分析塞进 DSH 的同一个面板，
+      代码全开源、数据链路可审计（每个上游适配器都在 <code>lib/</code> 里可查），信号与权重写在 <code>lib/signals.js</code>，想改就改。
+    </p>
+    <div class="grid">
+      <div class="card"><div class="ico">📈</div><h3>实时行情与大盘指数</h3><p>上证 / 深成 / 创业板 / 科创50，15 项实时指标；个股详情弹窗带分时图、日周月与 5/30 分钟前复权 K 线（MA5/10/20 + 成交量 + 十字光标）、主力资金流向、F10 财务摘要。</p></div>
+      <div class="card"><div class="ico">⭐</div><h3>自选股 · 持仓盈亏 · 价格预警</h3><p>分组管理，内联编辑持仓成本，按现价实时算浮动盈亏与收益率；行内设「涨到 / 跌破 / 涨跌幅达到」，交易时段自动盯盘，触发 toast + 桌面通知 + 蜂鸣。</p></div>
+      <div class="card"><div class="ico">🔍</div><h3>选股器：13 信号 + 7 策略交叉</h3><p>13 项技术信号（均线、MACD、RSI、KDJ、BOLL、放量、上穿…）加权评分排序；多策略模式取 7 个预设策略的并行交集，按命中数排序。信号定义集中在服务端，界面自动跟随。</p></div>
+      <div class="card"><div class="ico">🌡️</div><h3>涨停情绪温度计</h3><p>市场宽度 40% + 涨停强度 25% + 封板率 20% + 连板高度 15% 加权成 0~100 分，配连板梯队、炸板率、涨跌家数、可展开的涨停池明细。</p></div>
+      <div class="card"><div class="ico">🐉</div><h3>龙虎榜与 7×24 快讯</h3><p>龙虎榜按日期回溯到最近一个已发布的交易日，不把"还没发布"伪装成"没有数据"；新浪 / 东财 / 金十三源快讯跨源去重，重要资讯高亮，可点相关股票。</p></div>
+      <div class="card"><div class="ico">🤖</div><h3>AI 个股分析</h3><p>服务端汇总实时行情 + 近 60 日 K 线 + F10 财务后送模型，输出结构化中文分析（含风险提示）；支持 DeepSeek / OpenAI / Anthropic Claude / Kimi / 智谱 / 通义 等，密钥只在服务端。</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>六个标签页</h2>
+    <table class="tabs">
+      <tr><th>📊 大盘</th><td>四大指数实时行情 + 情绪温度计 + 连板梯队 + 涨停池</td></tr>
+      <tr><th>💹 行情</th><td>代码 / 名称 / 拼音首字母毫秒搜索；沪深A股 / 主板 / 非主板 / ETF / 可转债 / LOF 多池榜单 + 板块榜 + 龙虎榜</td></tr>
+      <tr><th>⭐ 自选</th><td>实时行情 + 持仓盈亏 + 价格预警 + JSON / CSV 备份导入导出</td></tr>
+      <tr><th>🔍 选股</th><td>评分选股 / 多策略交叉选股，带进度流式返回</td></tr>
+      <tr><th>📰 快讯</th><td>三源聚合 7×24，来源筛选、重要标红、关联股票直达</td></tr>
+      <tr><th>🤖 分析</th><td>AI 个股分析，多服务商 + 多协议（OpenAI 兼容 / Anthropic 原生），流式输出</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>安装（约 1 分钟）</h2>
+    <p class="lead">要求 DeepSeek Harness ≥ 0.1.1-rc.1，且使用 <strong>web profile</strong>。</p>
+<pre><span class="c"># 1) 拿代码</span>
+git clone https://github.com/SuCriss/dsh-leekbox.git
+
+<span class="c"># 2) 链接进 web profile 的 node_modules</span>
+<span class="c">#    Windows</span>
+mklink /J "%DSH_HOME%\profiles\web\node_modules\dsh-leekbox" "&lt;仓库路径&gt;"
+<span class="c">#    macOS / Linux</span>
+ln -s "&lt;仓库路径&gt;" "$DSH_HOME/profiles/web/node_modules/dsh-leekbox"
+
+<span class="c"># 3) 在 $DSH_HOME/profiles/web/cordis.patch.yml 追加：</span>
+<span class="c">#    - insert:</span>
+<span class="c">#        - id: leekbox</span>
+<span class="c">#          name: 'dsh-leekbox'</span>
+
+<span class="c"># 4) profile watcher 约 1 秒内热重组合；刷新浏览器，侧边栏出现 🥬</span></pre>
+    <p class="note">完整说明、数据源清单与工程细节见 <a href="https://github.com/SuCriss/dsh-leekbox#readme">README</a>。</p>
+  </section>
+
+  <section>
+    <h2>常见问题</h2>
+    <dl class="faq">
+      <dt>这是网页版还是客户端？要单独装软件吗？</dt>
+      <dd>都不是——它是 DSH 的插件，跑在 DSH 的 web profile 里：服务端路由在 DSH 进程内，界面是浏览器里的一个面板。</dd>
+
+      <dt>需要付费行情 API 或注册账号吗？</dt>
+      <dd>不需要。行情、指数、K 线、榜单、龙虎榜、快讯都来自公开免费接口（腾讯财经 / 东方财富 / 新浪财经 / 金十数据）。只有 AI 分析需要你自己填模型密钥。</dd>
+
+      <dt>行情有多实时？</dt>
+      <dd>交易时段内 30~60 秒轮询，盘中打开的详情窗口跟着刷新；非交易时段与页面在后台时不发请求，回到前台立刻补一次。</dd>
+
+      <dt>支持港股、美股、期货吗？</dt>
+      <dd>不支持，只做 A 股：沪深京股票、ETF / 场内基金、可转债、LOF。</dd>
+
+      <dt>自选股和模型密钥会上传到服务器吗？</dt>
+      <dd>不会。路由只监听 127.0.0.1，数据落盘在 <code>$DSH_HOME/.leekbox-*.json</code>，密钥只存在服务端、界面只显示脱敏值。</dd>
+
+      <dt>为什么有时右上角显示「休市」？</dt>
+      <dd>那是交易日历在说"今天不开市"。日历用指数日 K 反推交易日，并用分时探测区分"今天休市"与"今天的日线还没出"，不会把工作日误报成休市。</dd>
+    </dl>
+  </section>
+
+  <footer>
+    <div class="row">
+      <span>© SuCriss · MIT License · 数据仅供学习研究，不构成投资建议，股市有风险</span>
+      <span>
+        <a href="https://github.com/SuCriss/dsh-leekbox">GitHub</a> ·
+        <a href="https://www.npmjs.com/package/dsh-leekbox">npm</a> ·
+        <a href="https://github.com/SuCriss/dsh-leekbox/blob/main/README.en.md">English</a>
+      </span>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
