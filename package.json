@@ -1,6 +1,6 @@
 {
   "name": "dsh-leekbox",
-  "version": "0.19.3",
+  "version": "0.19.4",
   "description": "韭菜盒子 LeekBox — A股看盘助手 | A-share market dashboard for DeepSeek Harness (DSH): 实时行情与指数、分时/前复权K线、自选股持仓盈亏与价格预警、13 项技术信号选股与多策略交叉选股、涨停情绪温度计与龙虎榜、7×24 三源聚合快讯、AI 个股分析。Realtime quotes, candlestick K-line, screener, watchlist, limit-up sentiment, AI stock analysis.",
   "keywords": [
     "dsh",
